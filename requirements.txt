@@ -1,0 +1,35 @@
+# FastAPI
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# LLM Providers
+groq==0.4.2
+openai==1.12.0
+httpx==0.26.0
+
+# NLP & ML
+transformers==4.37.2
+torch==2.2.0
+sentencepiece==0.1.99
+
+# Data Validation
+pydantic==2.6.0
+pydantic-settings==2.1.0
+
+# Caching
+redis==5.0.1
+cachetools==5.3.2
+
+# Database
+asyncpg==0.29.0
+sqlalchemy==2.0.25
+
+# Utilities
+python-dotenv==1.0.1
+tenacity==8.2.3
+structlog==24.1.0
+
+# Testing
+pytest==8.0.0
+pytest-asyncio==0.23.4
+httpx==0.26.0
