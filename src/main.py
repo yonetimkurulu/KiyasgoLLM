@@ -10,7 +10,7 @@ import structlog
 import time
 
 from src.config import get_settings
-from src.api import products, compare, best_for, signals
+from src.api import products, compare, best_for, signals, chat
 
 # Configure structured logging
 structlog.configure(
@@ -108,6 +108,11 @@ app.include_router(
     signals.router,
     prefix=f"/api/{settings.api_version}/ai",
     tags=["Signals"]
+)
+app.include_router(
+    chat.router,
+    prefix=f"/api/{settings.api_version}/ai",
+    tags=["Chat"]
 )
 
 

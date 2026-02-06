@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1"
     
     # Groq default model
-    groq_model: str = "llama-3.1-70b-versatile"
+    groq_model: str = "llama-3.3-70b-versatile"
     
     # OpenAI default model
     openai_model: str = "gpt-4o-mini"
