@@ -164,8 +164,25 @@ async def _generate_comparison(products: list, context: Optional[str] = None) ->
         )
     
     # Generate verdict
+    # Find overall winner by average context scores
+    avg_scores = []
+    for p in products:
+        scores = [
+            p.context_scores.gaming,
+            p.context_scores.photography,
+            p.context_scores.business,
+            p.context_scores.long_term,
+        ] if hasattr(p, 'context_scores') else [0.5]
+        avg = sum(scores) / len(scores)
+        avg_scores.append((p.product_id, p.name, avg))
+    
+    avg_scores.sort(key=lambda x: x[2], reverse=True)
+    overall_winner = avg_scores[0] if avg_scores else None
+    
     verdict = {
-        "overall_winner": "context_dependent",
+        "winner": overall_winner[0] if overall_winner else "tie",
+        "winner_name": overall_winner[1] if overall_winner else "Eşit",
+        "overall_winner": overall_winner[0] if overall_winner else "context_dependent",
     }
     
     if context:
@@ -176,7 +193,8 @@ async def _generate_comparison(products: list, context: Optional[str] = None) ->
     
     # Generate summary
     product_names = [p.name for p in products]
-    summary = f"{' vs '.join(product_names)}: Karşılaştırma analizi tamamlandı."
+    winner_name = overall_winner[1] if overall_winner else product_names[0]
+    summary = f"{' vs '.join(product_names)}: Kazanan {winner_name}."
     
     recommendation = "Kullanım amacınıza göre en uygun ürünü seçin."
     
