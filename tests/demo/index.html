@@ -1,0 +1,254 @@
+
+<!DOCTYPE html>
+<html lang="tr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KıyasGO AI Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#3B82F6',
+                            600: '#2563EB',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-8">
+
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- INPUT SECTION -->
+        <div class="space-y-6">
+            <div class="flex items-center space-x-3 mb-8">
+                <div class="w-2 h-8 bg-brand-500 rounded-full"></div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-teal-400">
+                    KıyasGO AI Core
+                </h1>
+            </div>
+
+            <div class="glass rounded-2xl p-6 space-y-4">
+                <h2 class="text-xl font-semibold text-slate-200 border-b border-slate-700 pb-2">Ürün Bilgileri</h2>
+                
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Ürün İsmi</label>
+                    <input type="text" id="pName" value="iPhone 15 Pro Max" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-brand-500 outline-none transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">İşlemci (Chipset)</label>
+                        <select id="pChipsetTier" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                            <option value="flagship" selected>Flagship (A17/Snapdragon 8)</option>
+                            <option value="upper_mid">Upper Mid (7 Gen 3)</option>
+                            <option value="mid">Mid Range</option>
+                            <option value="budget">Budget</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Kamera (MP)</label>
+                        <input type="number" id="pCamera" value="48" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">RAM (GB)</label>
+                        <input type="number" id="pRam" value="8" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Batarya (mAh)</label>
+                        <input type="number" id="pBattery" value="4422" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-1">Ekran Tipi</label>
+                        <select id="pScreen" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                            <option value="AMOLED" selected>AMOLED / OLED</option>
+                            <option value="IPS">IPS LCD</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label class="block text-sm text-slate-400 mb-1">Ağırlık (gr)</label>
+                        <input type="number" id="pWeight" value="221" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1">Kullanıcı Yorumları (Simüle)</label>
+                    <textarea id="pReviews" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 outline-none text-sm">
+Isınma sorunu var ama performansı harika.
+Kamerası gece çekimlerinde muazzam.
+Şarjı bir günü zor çıkarıyor.
+Fiyatı çok pahalı ama titanyum kasa çok şık.
+                    </textarea>
+                    <p class="text-xs text-slate-500 mt-1">*Her satır ayrı bir yorum olarak işlenir.</p>
+                </div>
+
+                <button onclick="analyzeProduct()" class="w-full bg-gradient-to-r from-brand-600 to-blue-500 hover:from-brand-500 hover:to-blue-400 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-blue-500/20 flex items-center justify-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span>Yapay Zekayı Çalıştır</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- OUTPUT SECTION -->
+        <div class="space-y-6">
+            <h2 class="text-2xl font-bold text-slate-200">AI Analiz Raporu</h2>
+            
+            <div id="loading" class="hidden h-64 flex flex-col items-center justify-center glass rounded-2xl">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mb-4"></div>
+                <p class="text-slate-400 animate-pulse">Veriler işleniyor, analiz sentezleniyor...</p>
+            </div>
+
+            <div id="result" class="hidden space-y-6">
+                <!-- Headline Card -->
+                <div class="glass rounded-2xl p-6 border-l-4 border-brand-500 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <svg class="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    </div>
+                    <span class="text-brand-500 text-xs font-bold tracking-widest uppercase mb-2 block">AI ÖZETİ</span>
+                    <h3 id="resHeadline" class="text-2xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400"></h3>
+                </div>
+
+                <!-- Verdict & Score -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="glass rounded-2xl p-6 flex flex-col items-center justify-center md:col-span-1 bg-gradient-to-br from-slate-800 to-slate-900">
+                        <span class="text-sm text-slate-400 mb-2">KARAR PUANI</span>
+                        <div class="text-5xl font-bold text-white mb-2" id="resScore"></div>
+                        <div class="flex space-x-1" id="resStars"></div>
+                    </div>
+                    <div class="glass rounded-2xl p-6 md:col-span-2">
+                        <span class="text-sm text-slate-400 mb-2 block">AI KARARI</span>
+                        <p id="resVerdict" class="text-lg text-slate-300 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <!-- Pros & Cons -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="glass rounded-2xl p-6">
+                        <h4 class="flex items-center text-green-400 font-bold mb-4">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Güçlü Yönler
+                        </h4>
+                        <ul id="resPros" class="space-y-3"></ul>
+                    </div>
+                    <div class="glass rounded-2xl p-6">
+                        <h4 class="flex items-center text-red-400 font-bold mb-4">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Zayıf Yönler
+                        </h4>
+                        <ul id="resCons" class="space-y-3"></ul>
+                    </div>
+                </div>
+
+                <!-- Personas -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">KİMLER ALMALI?</span>
+                            <div id="resBuy" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 block">KİMLER UZAK DURMALI?</span>
+                            <div id="resAvoid" class="flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        async function analyzeProduct() {
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            // Show loading
+            result.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            const reviewsText = document.getElementById('pReviews').value;
+            const reviews = reviewsText.split('\n').filter(r => r.trim()).map(r => ({ text: r }));
+
+            const data = {
+                name: document.getElementById('pName').value,
+                specs: {
+                    chipset_tier: document.getElementById('pChipsetTier').value,
+                    camera_mp: parseInt(document.getElementById('pCamera').value),
+                    ram_gb: parseInt(document.getElementById('pRam').value),
+                    battery_mah: parseInt(document.getElementById('pBattery').value),
+                    screen_type: document.getElementById('pScreen').value,
+                    weight_grams: parseInt(document.getElementById('pWeight').value),
+                },
+                reviews: reviews
+            };
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const json = await response.json();
+                renderResult(json);
+            } catch (e) {
+                alert("Hata: " + e);
+            } finally {
+                loading.classList.add('hidden');
+                result.classList.remove('hidden');
+            }
+        }
+
+        function renderResult(data) {
+            document.getElementById('resHeadline').innerText = data.headline;
+            document.getElementById('resVerdict').innerText = data.verdict_text;
+            document.getElementById('resScore').innerText = data.verdict_score;
+            
+            // Pros
+            const prosHtml = data.key_strengths.map(s => 
+                `<li class="flex items-start text-sm text-slate-300">
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                    ${s.point}
+                </li>`
+            ).join('');
+            document.getElementById('resPros').innerHTML = prosHtml;
+
+            // Cons
+            const consHtml = data.key_weaknesses.map(s => 
+                `<li class="flex items-start text-sm text-slate-300">
+                    <span class="w-1.5 h-1.5 bg-red-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                    ${s.point}
+                </li>`
+            ).join('');
+            document.getElementById('resCons').innerHTML = consHtml;
+
+            // Personas (Badges)
+            document.getElementById('resBuy').innerHTML = data.who_should_buy.map(p => 
+                `<span class="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold border border-blue-500/30">${p}</span>`
+            ).join('');
+
+            document.getElementById('resAvoid').innerHTML = data.who_should_avoid.map(p => 
+                `<span class="bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-xs font-semibold border border-red-500/30">${p}</span>`
+            ).join('');
+        }
+    </script>
+</body>
+</html>

@@ -146,3 +146,62 @@ Kullanıcının anlayabileceği basit bir dille açıkla:
 1. Bu sinyal ne anlama geliyor?
 2. Kullanıcı ne yapmalı?
 3. Dikkat etmesi gereken şeyler"""
+
+    def decision_synthesis_prompt(
+        self,
+        name: str,
+        specs: dict,
+        context_scores: dict,
+        reviews: list = None
+    ) -> str:
+        """
+        Generate a prompt for synthesizing a final decision about a product.
+        Requests a JSON output.
+        """
+        import json
+        
+        specs_str = json.dumps(specs, ensure_ascii=False, indent=2)
+        scores_str = json.dumps(context_scores, ensure_ascii=False, indent=2)
+        reviews_str = "Henüz yorum yok."
+        if reviews:
+            reviews_str = "\n".join([f"- {r.get('text', '')}" for r in reviews[:5]])
+            
+        return f"""Aşağıdaki ürün verilerini analiz et ve bir JSON çıktısı üret.
+
+Ürün: {name}
+
+Teknik Özellikler:
+{specs_str}
+
+Kullanım Senaryosu Puanları (0-1 arası):
+{scores_str}
+
+Kullanıcı Yorumlarından Örnekler:
+{reviews_str}
+
+GÖREV:
+Bu verileri kullanarak yaratıcı ve içgörü dolu bir analiz yap. Asla sıkıcı olma.
+
+İSTENEN JSON FORMATI:
+{{
+  "headline": "Çarpıcı, dikkat çekici, 5-10 kelimelik bir başlık",
+  "who_should_buy": ["Kitle 1", "Kitle 2", "Kitle 3"],
+  "who_should_avoid": ["Kitle 1", "Kitle 2", "Kitle 3"],
+  "key_strengths": [
+    {{"point": "Güçlü özellik 1", "impact": "high"}},
+    {{"point": "Güçlü özellik 2", "impact": "medium"}}
+  ],
+  "key_weaknesses": [
+    {{"point": "Zayıf yön 1", "impact": "high"}},
+    {{"point": "Zayıf yön 2", "impact": "medium"}}
+  ],
+  "verdict_text": "2-3 cümlelik nihai karar özeti.",
+  "verdict_score": 8.5  // 1-10 arası, virgülden sonra tek hane
+}}
+
+KURALLAR:
+1. Sadece saf JSON döndür. Markdown bloğu kullanma.
+2. Türkçe yanıtla.
+3. Teknik özelliklere sadık kal ama yorum kat.
+4. "kamera: 108mp" gibi ham veri yerine "108MP ile detay canavarı kamera" gibi ifadeler kullan.
+"""

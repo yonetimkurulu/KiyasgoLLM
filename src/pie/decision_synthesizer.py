@@ -3,8 +3,12 @@ Decision Synthesizer Service
 Tüm sinyalleri birleştirerek final karar özetini üretir.
 """
 from typing import Optional
+import json
+import structlog
 from src.models.product import ProductSpecs, UsageContextScores
 from src.llm import LLMProvider
+
+logger = structlog.get_logger()
 
 
 class DecisionSynthesizer:
@@ -22,6 +26,32 @@ class DecisionSynthesizer:
         self.llm = LLMProvider()
     
     async def synthesize(
+        self,
+        product_id: str,
+        name: str,
+        specs: ProductSpecs,
+        context_scores: UsageContextScores,
+        price_info: Optional[dict] = None,
+        reviews: list = None,
+    ) -> dict:
+        """
+        Synthesize all data into decision summary using LLM with fallback.
+        """
+        try:
+            return await self._synthesize_with_llm(
+                name=name,
+                specs=specs,
+                context_scores=context_scores,
+                price_info=price_info,
+                reviews=reviews
+            )
+        except Exception as e:
+            logger.error("LLM synthesis failed, falling back to rules", error=str(e))
+            return await self._synthesize_rules(
+                product_id, name, specs, context_scores, price_info, reviews
+            )
+
+    async def _synthesize_rules(
         self,
         product_id: str,
         name: str,
@@ -344,3 +374,68 @@ class DecisionSynthesizer:
             sentiment = "neutral"
         
         return sentiment, round(score, 2)
+
+    async def _synthesize_with_llm(
+        self,
+        name: str,
+        specs: ProductSpecs,
+        context_scores: UsageContextScores,
+        price_info: Optional[dict],
+        reviews: list,
+    ) -> dict:
+        """Synthesize using LLM."""
+        # Prepare data for prompt
+        specs_dict = specs.model_dump(exclude_none=True)
+        scores_dict = context_scores.model_dump()
+        
+        prompt = self.llm.prompts.decision_synthesis_prompt(
+            name=name,
+            specs=specs_dict,
+            context_scores=scores_dict,
+            reviews=reviews
+        )
+        
+        # Generate JSON
+        response_json = await self.llm.generate(
+            prompt=prompt,
+            system_prompt=self.llm.prompts.system_prompt_turkish(),
+            temperature=0.7
+        )
+        
+        # Parse JSON (naive parsing, ensuring it's valid)
+        # Clean potential markdown code blocks if the LLM adds them
+        cleaned_json = response_json.replace("```json", "").replace("```", "").strip()
+        data = json.loads(cleaned_json)
+        
+        # Calculate calculated fields that LLM might miss or we want to enforce
+        # We still run determine_best_for/avoid_for for structure consistency if needed, 
+        # but the LLM output is preferred for the text parts.
+        
+        # Backfill any missing fields from rules if necessary, or just trust LLM.
+        # For 'best_for' and 'avoid_for', we trust our mathematical scoring for the *list*, 
+        # but we can use LLM's text.
+        # Actually, let's mix them. We use the LLM's rich text but maybe validate with scores?
+        # For this implementation, let's fully trust the LLM's high-level output 
+        # but ensure required fields exist.
+        
+        # Add sentiment analysis (hybrid: use code for sentiment score consistency)
+        sentiment, sentiment_score = self._analyze_reviews(reviews)
+        
+        return {
+            "headline": data.get("headline", f"{name} İncelemesi"),
+            "sentiment": sentiment,
+            "sentiment_score": sentiment_score,
+            "best_for": data.get("who_should_buy", []), # Note: Mapping issue? No, 'best_for' is context keys (gaming, etc). 
+                                                        # 'who_should_buy' is user personas.
+                                                        # The LLM prompt asks for 'who_should_buy'. 
+                                                        # The Pydantic model 'ProductIntelligence' has 'best_for' (list of strings, context IDs) AND 'who_should_buy' (list of strings).
+                                                        # We need to compute 'best_for' (contexts) mathematically because it relies on the fixed context keys.
+            "best_for": self._determine_best_for(context_scores),  # Keep mathematical rigor for tags
+            "avoid_for": self._determine_avoid_for(context_scores), # Keep mathematical rigor for tags
+            "who_should_buy": data.get("who_should_buy", []),
+            "who_should_avoid": data.get("who_should_avoid", []),
+            "key_strengths": data.get("key_strengths", []),
+            "key_weaknesses": data.get("key_weaknesses", []),
+            "verdict_score": float(data.get("verdict_score", 0.0)),
+            "verdict_text": data.get("verdict_text", "")
+        }
