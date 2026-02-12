@@ -42,6 +42,19 @@ class Settings(BaseSettings):
     rate_limit_requests: int = 100
     rate_limit_period: int = 60
     
+    # Scoring Thresholds (Architecture Rule #2)
+    price_high_threshold: int = 90000
+    price_medium_threshold: int = 70000
+    camera_mp_high: int = 108
+    camera_mp_mid: int = 50
+    battery_mah_large: int = 5000
+    battery_mah_small: int = 4000
+    weight_heavy: int = 220
+    storage_min: int = 128
+    
+    score_threshold_best: float = 0.7
+    score_threshold_avoid: float = 0.4
+    
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

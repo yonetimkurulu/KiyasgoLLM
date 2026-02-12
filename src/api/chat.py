@@ -13,6 +13,7 @@ from src.llm.advanced_provider import get_advanced_llm
 from src.llm.memory import get_memory
 from src.pie import ProductIntelligenceEngine
 from src.cse import CommerceSignalEngine
+from src.security.sanitizer import sanitize_user_input, validate_product_id
 
 router = APIRouter()
 llm = get_advanced_llm()
@@ -52,11 +53,22 @@ async def chat(request: ChatRequest):
     # Get conversation history
     history_context = memory.get_context(conversation_id)
     
+    # Sanitize inputs
+    safe_message = sanitize_user_input(request.message)
+    safe_context = sanitize_user_input(request.context) if request.context else None
+    
+    # Validate product_id if present
+    if request.product_id:
+        try:
+            validate_product_id(request.product_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
     # Build enhanced prompt
     prompt = await _build_context_prompt(
-        message=request.message,
+        message=safe_message,
         history=history_context,
-        context=request.context,
+        context=safe_context,
         product_id=request.product_id,
     )
     
@@ -87,10 +99,21 @@ async def chat_stream(request: ChatRequest):
     conversation_id = request.conversation_id or _generate_id()
     history_context = memory.get_context(conversation_id)
     
+    # Sanitize inputs
+    safe_message = sanitize_user_input(request.message)
+    safe_context = sanitize_user_input(request.context) if request.context else None
+
+    # Validate product_id if present
+    if request.product_id:
+        try:
+            validate_product_id(request.product_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    
     prompt = await _build_context_prompt(
-        message=request.message,
+        message=safe_message,
         history=history_context,
-        context=request.context,
+        context=safe_context,
         product_id=request.product_id,
     )
     

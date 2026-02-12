@@ -7,7 +7,9 @@ import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.config import get_settings
+from src.config import get_settings
 from src.llm.prompts import PromptTemplates
+from src.llm.mock_provider import MockLLMProvider
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -201,7 +203,7 @@ class LLMProvider:
     
     def _mock_response(self, prompt: str) -> str:
         """Generate mock response for testing."""
-        return "Bu, LLM sağlayıcısı olmadan oluşturulan örnek bir yanıttır."
+        return MockLLMProvider.get_mock_response(prompt)
     
     async def generate_product_analysis(self, product_data: dict) -> dict:
         """Generate product analysis using LLM."""

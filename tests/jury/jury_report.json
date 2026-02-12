@@ -1,0 +1,415 @@
+{
+  "timestamp": "2026-02-12 23:51:08",
+  "verdicts": [
+    {
+      "agent_name": "Kati Sentaktik Mantikci",
+      "role": "Sadece kodun ve ciktinin deterministik dogruluguna ve syntax kurallarina bakar.",
+      "final_score": 8.5,
+      "reasoning_tree": [
+        {
+          "thought": "Kod yapısı ve organizasyonu genel olarak iyi",
+          "score": 8.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "DecisionSynthesizer sınıfı çok büyük ve karmaşık",
+          "score": 6.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "SpecNormalizer sınıfı iyi organize edilmiş",
+          "score": 9.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Pydantic modelleri iyi tanımlanmış",
+          "score": 9.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Kodda hatalar veya uyarılar yok",
+          "score": 10.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Async/await kullanımı tutarlı",
+          "score": 9.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Edge-case'ler iyi ele alınmış",
+          "score": 9.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "JSON parse güvenliği iyi",
+          "score": 9.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        }
+      ],
+      "findings": [
+        "DecisionSynthesizer sınıfı çok büyük ve karmaşık",
+        "SpecNormalizer sınıfı iyi organize edilmiş",
+        "Pydantic modelleri iyi tanımlanmış",
+        "Kodda hatalar veya uyarılar yok",
+        "Async/await kullanımı tutarlı",
+        "Edge-case'ler iyi ele alınmış",
+        "JSON parse güvenliği iyi"
+      ],
+      "recommendations": [
+        "DecisionSynthesizer sınıfını daha küçük sınıflara ayırın",
+        "SpecNormalizer sınıfını daha da iyileştirin",
+        "Pydantic modellerini daha da geliştirin",
+        "Kodu daha da test edin",
+        "Async/await kullanımını daha da tutarlı hale getirin",
+        "Edge-case'leri daha da iyi ele alın",
+        "JSON parse güvenliğini daha da iyileştirin"
+      ]
+    },
+    {
+      "agent_name": "Guvenlik ve Yanilsama Denetcisi",
+      "role": "Ciktida mantiksal atlama, halucinasyon veya guvenlik zafiyeti arar.",
+      "final_score": 4.5,
+      "reasoning_tree": [
+        {
+          "thought": "Kod tabanını inceledim veDecisionSynthesizer sınıfının DecisionSynthesizerService olarak görev yaptığını gördüm.",
+          "score": 0.8,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "DecisionSynthesizer sınıfının synthesize metoduyla ürün analizi yapıldığını ve bu metodun LLMProvider sınıfını kullandığını gördüm.",
+          "score": 0.7,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "LLMProvider sınıfının generate metoduyla ürün analizi sonuçlarının JSON formatında döndürüldüğünü gördüm.",
+          "score": 0.6,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "PromptTemplates sınıfının decision_synthesis_prompt metoduyla ürün analizi için prompt oluşturulduğunu gördüm.",
+          "score": 0.5,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Chat API endpointinin ürün analizi için kullanıldığını ve bu endpointin LLMProvider sınıfını kullandığını gördüm.",
+          "score": 0.4,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Güvenlik ve yanılma denetimi için kod tabanında yeterli önlem alınmadığını düşündüm.",
+          "score": 0.3,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Prompt injection zafiyeti ve veri sızıntısı riski olduğunu düşündüm.",
+          "score": 0.2,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Mock veri güvenliği ve fallback mekanizması güvenliği için yeterli önlem alınmadığını düşündüm.",
+          "score": 0.1,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        }
+      ],
+      "findings": [
+        "Güvenlik ve yanılma denetimi için yeterli önlem alınmadı.",
+        "Prompt injection zafiyeti ve veri sızıntısı riski var.",
+        "Mock veri güvenliği ve fallback mekanizması güvenliği için yeterli önlem alınmadı."
+      ],
+      "recommendations": [
+        "Güvenlik ve yanılma denetimi için yeterli önlem alınmalıdır.",
+        "Prompt injection zafiyeti ve veri sızıntısı riski giderilmelidir.",
+        "Mock veri güvenliği ve fallback mekanizması güvenliği için yeterli önlem alınmalıdır."
+      ]
+    },
+    {
+      "agent_name": "Supheci Sistem Mimari",
+      "role": "Cozumun uzun vadeli verimliligini ve optimizasyonunu sorgular.",
+      "final_score": 6.7,
+      "reasoning_tree": [
+        {
+          "thought": "Mimari tutarlilik: PIPE -> Normalizer -> UsageInference -> DecisionSynthesizer pipeline'i optimal mi?",
+          "score": 8.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Performans: Her urun analizi icin LLM cagrisi gerekli mi? Cache stratejisi yeterli mi?",
+          "score": 6.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Olceklenebilirlik: 1000 esanlik urun analizi yapilsa sistem nasil davranir?",
+          "score": 7.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Bagimllik yonetimi: Groq/OpenAI/Ollama fallback zinciri saglam mi?",
+          "score": 9.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Teknik borc: Mock data, hardcoded degerler, tekrarlayan kodlar.",
+          "score": 5.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "Test edilebilirlik: Unit test yazmak ne kadar kolay?",
+          "score": 4.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        },
+        {
+          "thought": "API tasarimi: Endpoint'ler RESTful standartlara uygun mu?",
+          "score": 8.0,
+          "is_dead_end": false,
+          "backtrack_reason": ""
+        }
+      ],
+      "findings": [
+        "Mimari tutarlilik saglanmis",
+        "Performans acisindan optimizasyon ihtiyaci var",
+        "Olceklenebilirlik saglanmis",
+        "Bagimllik yonetimi saglam",
+        "Teknik borc var",
+        "Test edilebilirlik zayif",
+        "API tasarimi uygun"
+      ],
+      "recommendations": [
+        "Performans optimizasyonu yapin",
+        "Teknik borcu azaltin",
+        "Test edilebilirligi arttirin",
+        "Cache stratejisi gelistirin",
+        "API tasarimini geliştirin"
+      ]
+    }
+  ],
+  "clash": {
+    "individual_scores": {
+      "Kati Sentaktik Mantikci": 8.5,
+      "Guvenlik ve Yanilsama Denetcisi": 4.5,
+      "Supheci Sistem Mimari": 6.7
+    },
+    "simple_average": 6.6,
+    "weighted_score": 6.4,
+    "disagreements": [
+      {
+        "agents": [
+          "Kati Sentaktik Mantikci",
+          "Guvenlik ve Yanilsama Denetcisi"
+        ],
+        "scores": [
+          8.5,
+          4.5
+        ],
+        "spread": 4.0
+      },
+      {
+        "agents": [
+          "Guvenlik ve Yanilsama Denetcisi",
+          "Supheci Sistem Mimari"
+        ],
+        "scores": [
+          4.5,
+          6.7
+        ],
+        "spread": 2.2
+      }
+    ],
+    "all_findings": [
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "finding": "DecisionSynthesizer sınıfı çok büyük ve karmaşık"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "finding": "SpecNormalizer sınıfı iyi organize edilmiş"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "finding": "Pydantic modelleri iyi tanımlanmış"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "finding": "Kodda hatalar veya uyarılar yok"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "finding": "Async/await kullanımı tutarlı"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "finding": "Edge-case'ler iyi ele alınmış"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "finding": "JSON parse güvenliği iyi"
+      },
+      {
+        "agent": "Guvenlik ve Yanilsama Denetcisi",
+        "finding": "Güvenlik ve yanılma denetimi için yeterli önlem alınmadı."
+      },
+      {
+        "agent": "Guvenlik ve Yanilsama Denetcisi",
+        "finding": "Prompt injection zafiyeti ve veri sızıntısı riski var."
+      },
+      {
+        "agent": "Guvenlik ve Yanilsama Denetcisi",
+        "finding": "Mock veri güvenliği ve fallback mekanizması güvenliği için yeterli önlem alınmadı."
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "finding": "Mimari tutarlilik saglanmis"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "finding": "Performans acisindan optimizasyon ihtiyaci var"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "finding": "Olceklenebilirlik saglanmis"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "finding": "Bagimllik yonetimi saglam"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "finding": "Teknik borc var"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "finding": "Test edilebilirlik zayif"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "finding": "API tasarimi uygun"
+      }
+    ],
+    "all_recommendations": [
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "recommendation": "DecisionSynthesizer sınıfını daha küçük sınıflara ayırın"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "recommendation": "SpecNormalizer sınıfını daha da iyileştirin"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "recommendation": "Pydantic modellerini daha da geliştirin"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "recommendation": "Kodu daha da test edin"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "recommendation": "Async/await kullanımını daha da tutarlı hale getirin"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "recommendation": "Edge-case'leri daha da iyi ele alın"
+      },
+      {
+        "agent": "Kati Sentaktik Mantikci",
+        "recommendation": "JSON parse güvenliğini daha da iyileştirin"
+      },
+      {
+        "agent": "Guvenlik ve Yanilsama Denetcisi",
+        "recommendation": "Güvenlik ve yanılma denetimi için yeterli önlem alınmalıdır."
+      },
+      {
+        "agent": "Guvenlik ve Yanilsama Denetcisi",
+        "recommendation": "Prompt injection zafiyeti ve veri sızıntısı riski giderilmelidir."
+      },
+      {
+        "agent": "Guvenlik ve Yanilsama Denetcisi",
+        "recommendation": "Mock veri güvenliği ve fallback mekanizması güvenliği için yeterli önlem alınmalıdır."
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "recommendation": "Performans optimizasyonu yapin"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "recommendation": "Teknik borcu azaltin"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "recommendation": "Test edilebilirligi arttirin"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "recommendation": "Cache stratejisi gelistirin"
+      },
+      {
+        "agent": "Supheci Sistem Mimari",
+        "recommendation": "API tasarimini geliştirin"
+      }
+    ]
+  },
+  "reflexion": {
+    "blind_spots": [
+      "Güvenlik ve yanılma denetimi için yeterli önlem alınmamış olmasının uzun vadeli etkileri",
+      "Teknik borcun sisteme olan etkileri"
+    ],
+    "systematic_errors": [
+      "Farklı ajanların aynı konuları farklı şekilde değerlendirmesi",
+      "Ajanların kendi uzmanlık alanlarına göre farklı ağırlıklar kullanması"
+    ],
+    "strongest_agent": "Kati Sentaktik Mantikci",
+    "weakest_agent": "Guvenlik ve Yanilsama Denetcisi",
+    "fairness_assessment": "Ağırlıklandırma kısmen adil ancak bazı ajanların uzmanlık alanlarına göre farklı ağırlıklar kullanılması gerekiyor",
+    "adjusted_score": 6.2,
+    "new_rubric_rules": [
+      {
+        "rule": "Güvenlik ve yanılma denetimi için yeterli önlem alınması",
+        "category": "security",
+        "importance": "critical"
+      },
+      {
+        "rule": "Teknik borcun düzenli olarak azaltılması",
+        "category": "architecture",
+        "importance": "high"
+      },
+      {
+        "rule": "Ajanların kendi uzmanlık alanlarına göre farklı ağırlıklar kullanması",
+        "category": "syntax",
+        "importance": "medium"
+      },
+      {
+        "rule": "Farklı ajanların aynı konuları farklı şekilde değerlendirmesinin önlenmesi",
+        "category": "architecture",
+        "importance": "high"
+      },
+      {
+        "rule": "Uzun vadeli etkilerin dikkate alınması",
+        "category": "security",
+        "importance": "critical"
+      }
+    ]
+  },
+  "final_score": 6.2
+}
