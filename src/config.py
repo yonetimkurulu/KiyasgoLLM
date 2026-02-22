@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     cache_ttl_comparison: int = 3600  # 1 hour
     cache_enabled: bool = True
     
+    # SerpApi (Google Shopping)
+    serpapi_api_key: str = ""
+    serpapi_gl: str = "tr"
+    serpapi_hl: str = "tr"
+    cache_ttl_shopping: int = 21600  # 6 hours
+    shopping_sync_on_startup: bool = False
+    
     # Database
     database_url: str = ""
     

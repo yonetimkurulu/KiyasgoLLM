@@ -13,7 +13,7 @@ import structlog
 import time
 
 from src.config import get_settings
-from src.api import products, compare, best_for, signals, chat, trends, explain
+from src.api import products, compare, best_for, signals, chat, trends, explain, shopping
 
 # Configure structured logging
 structlog.configure(
@@ -64,6 +64,15 @@ async def lifespan(app: FastAPI):
             db.close()
     except Exception as e:
         logger.warning("Database initialization skipped", error=str(e))
+    
+    # Optional: sync Google Shopping on startup
+    if settings.shopping_sync_on_startup and settings.serpapi_api_key:
+        try:
+            from src.shopping.sync import sync_all
+            logger.info("Running Google Shopping sync on startup")
+            sync_all(num=10)
+        except Exception as e:
+            logger.warning("Shopping sync on startup failed", error=str(e))
     
     yield
     
@@ -155,6 +164,11 @@ app.include_router(
     explain.router,
     prefix=f"/api/{settings.api_version}/ai",
     tags=["Explain"]
+)
+app.include_router(
+    shopping.router,
+    prefix=f"/api/{settings.api_version}/ai",
+    tags=["Shopping"]
 )
 
 
