@@ -69,6 +69,15 @@ async def get_product_intelligence(
         intelligence = await pie.analyze_product(product_id, context=context)
         
         # Build response
+        key_facts = [
+            f for f in [
+                f"{intelligence.specs.camera_mp}MP kamera" if intelligence.specs.camera_mp else None,
+                f"{intelligence.specs.ram_gb}GB RAM" if intelligence.specs.ram_gb else None,
+                f"Fiyat araligi: {intelligence.pricing.current_low:,} - {intelligence.pricing.current_high:,} TRY" if intelligence.pricing else None,
+            ]
+            if f is not None
+        ]
+        
         response = ProductResponse(
             summary=intelligence.headline,
             data=intelligence,
@@ -78,18 +87,11 @@ async def get_product_intelligence(
                 data_freshness="2h",
             ),
             llm_hints=LLMHints(
-                key_facts=[
-                    f"{intelligence.specs.camera_mp}MP kamera" if intelligence.specs.camera_mp else None,
-                    f"{intelligence.specs.ram_gb}GB RAM" if intelligence.specs.ram_gb else None,
-                    f"Fiyat araligi: {intelligence.pricing.current_low:,} - {intelligence.pricing.current_high:,} TRY" if intelligence.pricing else None,
-                ],
+                key_facts=key_facts,
                 comparison_context=f"Kategori: {intelligence.category}",
                 actionable_insight=intelligence.verdict_text,
             ),
         )
-        
-        # Filter key_facts for None values
-        response.llm_hints.key_facts = [f for f in response.llm_hints.key_facts if f]
         
         return response
         

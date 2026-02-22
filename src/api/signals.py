@@ -87,30 +87,6 @@ async def get_product_signals(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/market/trends", response_model=dict)
-async def get_market_trends(
-    category: str = Query(..., description="Product category"),
-    period: int = Query(30, description="Period in days", ge=7, le=90),
-):
-    """
-    Get market trends for a category.
-    
-    Returns:
-    - Price trend (average, min, max over period)
-    - Popular products
-    - Supply situation
-    - Upcoming releases
-    """
-    try:
-        trends = await cse.get_market_trends(category, period)
-        
-        return {
-            "category": category,
-            "period_days": period,
-            "trends": trends,
-            "generated_at": "2025-01-28T14:00:00Z",
-        }
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

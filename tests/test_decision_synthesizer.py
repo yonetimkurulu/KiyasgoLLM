@@ -4,18 +4,24 @@ from src.pie.decision_synthesizer import DecisionSynthesizer
 from src.models.product import ProductSpecs, UsageContextScores
 
 @pytest.fixture
-def mock_llm_provider():
-    with patch("src.pie.decision_synthesizer.LLMProvider") as MockClass:
-        mock_instance = MockClass.return_value
-        # Mock generate to return a JSON string
-        mock_instance.generate = AsyncMock(return_value='{"headline": "Test Headline", "verdict_score": 8.5}')
-        # Mock prompts
-        mock_instance.prompts.decision_synthesis_prompt = MagicMock(return_value="test prompt")
-        mock_instance.prompts.system_prompt_turkish = MagicMock(return_value="system prompt")
+def mock_advanced_llm():
+    with patch("src.pie.decision_synthesizer.get_advanced_llm") as mock_get:
+        mock_instance = MagicMock()
+        # Mock generate_structured to return a dict
+        mock_instance.generate_structured = AsyncMock(return_value={
+            "headline": "Test Headline", 
+            "verdict_score": 8.5,
+            "who_should_buy": ["Gamers"],
+            "who_should_avoid": ["Budget users"],
+            "key_strengths": [{"point": "Perf", "impact": "high"}],
+            "key_weaknesses": [{"point": "Price", "impact": "medium"}],
+            "verdict_text": "Good phone"
+        })
+        mock_get.return_value = mock_instance
         yield mock_instance
 
 @pytest.fixture
-def synthesizer(mock_llm_provider):
+def synthesizer(mock_advanced_llm):
     return DecisionSynthesizer()
 
 @pytest.fixture
@@ -58,10 +64,10 @@ async def test_synthesize_llm_success(synthesizer, sample_data):
     assert "gaming" in result["best_for"]
 
 @pytest.mark.asyncio
-async def test_synthesize_llm_failure_fallback(synthesizer, sample_data):
+async def test_synthesize_llm_failure_fallback(synthesizer, sample_data, mock_advanced_llm):
     """Test fallback to rules when LLM fails."""
     # Simulate LLM failure
-    synthesizer.llm.generate.side_effect = Exception("LLM Error")
+    mock_advanced_llm.generate_structured.side_effect = Exception("LLM Error")
     
     result = await synthesizer.synthesize(**sample_data)
     

@@ -66,7 +66,7 @@ async def get_best_for(
         
         # Generate summary
         if budget:
-            summary = f"₺{budget:,} bütçeyle {context} için en iyi {category}: {recommendations[0].name if recommendations else 'Bulunamadı'}"
+            summary = f"TL{budget:,} bütçeyle {context} için en iyi {category}: {recommendations[0].name if recommendations else 'Bulunamadı'}"
         else:
             summary = f"{context.title()} için en iyi {category}: {recommendations[0].name if recommendations else 'Bulunamadı'}"
         

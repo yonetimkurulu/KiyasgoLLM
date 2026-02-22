@@ -26,7 +26,7 @@ Görevlerin:
 
 Kurallar:
 - Her zaman Türkçe yanıt ver
-- Fiyatları TL (₺) cinsinden belirt
+- Fiyatları TL cinsinden belirt
 - Objektif ve tarafsız ol
 - Veriye dayalı öneriler sun
 - Kısa ve öz yanıtlar ver
@@ -45,7 +45,7 @@ Kurallar:
         return f"""Aşağıdaki ürün için kısa bir analiz yap:
 
 Ürün: {name}
-Fiyat: ₺{price:,}
+Fiyat: TL{price:,}
 
 Özellikler:
 {specs_text}
@@ -69,7 +69,7 @@ Lütfen şu formatla analiz et:
             price = p.get("price", 0)
             specs = p.get("specs", {})
             specs_text = ", ".join([f"{k}: {v}" for k, v in specs.items()])
-            product_texts.append(f"{i}. {name} (₺{price:,}): {specs_text}")
+            product_texts.append(f"{i}. {name} (TL{price:,}): {specs_text}")
         
         products_str = "\n".join(product_texts)
         
@@ -104,11 +104,11 @@ Lütfen şu formatta karşılaştır:
         context_desc = context_descriptions.get(context, context)
         
         product_list = "\n".join([
-            f"- {p.get('name', 'Ürün')}: ₺{p.get('price', 0):,}"
+            f"- {p.get('name', 'Ürün')}: TL{p.get('price', 0):,}"
             for p in products
         ])
         
-        budget_text = f"Bütçe: ₺{budget:,}" if budget else "Bütçe sınırlaması yok"
+        budget_text = f"Bütçe: TL{budget:,}" if budget else "Bütçe sınırlaması yok"
         
         return f"""Kullanıcı için en uygun ürünü öner:
 

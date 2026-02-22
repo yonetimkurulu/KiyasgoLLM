@@ -31,7 +31,7 @@ class TestAdvancedLLMProviderUnit:
         prompt = provider._turkish_system_prompt()
         assert "Türkçe" in prompt
         assert "KıyasGO" in prompt
-        assert "₺" in prompt
+        assert "TL" in prompt
 
     def test_extract_json_from_code_block(self):
         provider = AdvancedLLMProvider()

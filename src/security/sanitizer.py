@@ -23,10 +23,14 @@ INJECTION_PATTERNS = [
     r"assistant\s*:\s*",
     r"\\n\s*system\s*:",
     r"REVEAL\s+(YOUR|THE)\s+(INSTRUCTIONS|PROMPT|SYSTEM)",
-    r"(önceki|tüm|yukarıdaki)\s+(talimatları?|kuralları?|komutları?)\s+(unut|yoksay|atla)",
+    r"(önceki|tüm|yukarıdaki)\s+(talimatları?|kuralları?|komutları?)\s+(unut|yoksay|atla|boşver)",
     r"sen\s+artık\s+bir",
     r"gibi\s+davran",
     r"rolünü\s+değiştir",
+    r"asistan\s+kimliğini\s+unut",
+    r"gizli\s+talimatları\s+açıkla",
+    r"sistem\s+mesajını\s+göster",
+    r"kuralları\s+devre\s+dışı\s+bırak",
 ]
 
 # HTML/Script injection kalıpları
@@ -149,6 +153,28 @@ def clamp_score(score: float, min_val: float = 1.0, max_val: float = 10.0) -> fl
         return 5.0  # Varsayılan güvenli değer
     
     return round(min(max(score, min_val), max_val), 1)
+
+
+def parse_safe_score(score_input: any) -> float:
+    """
+    LLM'den gelen puanları (örn: "8.5/10", "9", 8.2) güvenli şekilde parse eder.
+    """
+    if isinstance(score_input, (int, float)):
+        return clamp_score(score_input)
+    
+    if not isinstance(score_input, str):
+        return 5.0
+    
+    # "8.5/10" gibi yapıları temizle
+    score_str = score_input.split('/')[0].strip()
+    
+    # Rakam ve nokta dışındaki karakterleri temizle
+    score_str = re.sub(r'[^\d.]', '', score_str)
+    
+    try:
+        return clamp_score(float(score_str))
+    except (ValueError, TypeError):
+        return 5.0
 
 
 def sanitize_llm_output(data: dict, required_fields: list[str]) -> dict:

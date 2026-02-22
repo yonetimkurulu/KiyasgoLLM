@@ -6,6 +6,7 @@ Database-backed: Tries repository first, falls back to mock if DB is empty.
 """
 from typing import Optional
 import structlog
+from fastapi import HTTPException
 
 from src.models.product import (
     ProductIntelligence,
@@ -19,6 +20,8 @@ from src.pie.decision_synthesizer import DecisionSynthesizer
 from src.llm import LLMProvider
 from src.db.session import SessionLocal
 from src.db.repository import ProductRepository
+from src.db.models import Product, PriceHistory
+from datetime import datetime, timezone
 
 logger = structlog.get_logger()
 
@@ -59,6 +62,9 @@ class ProductIntelligenceEngine:
         Returns:
             ProductIntelligence with all analysis results
         """
+        if product_id.lower() == "search":
+            raise HTTPException(status_code=400, detail="Arama terimi ürün ID'si olarak kullanılamaz.")
+            
         logger.info("Analyzing product", product_id=product_id, context=context)
         
         # Step 1: Get raw product data (DB first, mock fallback)
@@ -125,8 +131,8 @@ class ProductIntelligenceEngine:
         logger.info("Searching products", query=query, category=category)
         
         # Try DB first
-        repo, db = self._get_repo()
-        try:
+        with SessionLocal() as db:
+            repo = ProductRepository(db)
             db_results = repo.search(query, category=category, limit=limit)
             if db_results:
                 results = []
@@ -139,8 +145,6 @@ class ProductIntelligenceEngine:
                         "best_for": (p.best_for or [])[:2],
                     })
                 return results
-        finally:
-            db.close()
         
         # Fallback: mock search → analyze
         mock_results = self._mock_search(query, category, limit)
@@ -167,8 +171,8 @@ class ProductIntelligenceEngine:
         logger.info("Getting top products", category=category, budget=budget, context=context)
         
         # Try DB first
-        repo, db = self._get_repo()
-        try:
+        with SessionLocal() as db:
+            repo = ProductRepository(db)
             if context:
                 db_products = repo.get_top_for_context(category, context, budget=budget, limit=limit)
             else:
@@ -178,8 +182,6 @@ class ProductIntelligenceEngine:
                 product_ids = [p.id for p in db_products]
             else:
                 product_ids = [p["id"] for p in self._mock_category_products(category, budget, limit)]
-        finally:
-            db.close()
         
         results = []
         for pid in product_ids:
@@ -197,18 +199,77 @@ class ProductIntelligenceEngine:
     async def _fetch_product_data(self, product_id: str) -> dict:
         """
         Fetch raw product data.
-        Tries database first, falls back to mock data.
+        Pipeline: DB → SerpApi (auto-sync) → mock fallback.
         """
-        # Try DB
-        repo, db = self._get_repo()
-        try:
+        # Step 1: Try DB
+        with SessionLocal() as db:
+            repo = ProductRepository(db)
             product = repo.get_by_id(product_id)
             if product:
+                logger.info("Product found in DB", product_id=product_id)
                 return self._db_product_to_dict(product)
-        finally:
-            db.close()
         
-        # Fallback to mock data
+        # Step 2: Smart Fallback — search SerpApi and auto-sync to DB
+        try:
+            from src.shopping.client import ShoppingClient
+            from src.shopping.normalizer import ShoppingNormalizer
+            from src.shopping.sync import sync_category
+            
+            client = ShoppingClient()
+            if client.api_key:
+                # Search using the product_id as query
+                query = product_id.replace("-", " ")
+                logger.info("Product not in DB, searching SerpApi", product_id=product_id, query=query)
+                
+                response = client.search(query, num=5)
+                raw_results = response.get("shopping_results", [])
+                
+                if raw_results:
+                    normalizer = ShoppingNormalizer()
+                    normalized = normalizer.normalize_results(raw_results, default_category="smartphone")
+                    
+                    if normalized:
+                        with SessionLocal() as db2:
+                            best = normalized[0]
+                            # Use the requested product_id if it's a close match to the found slug
+                            use_id = product_id if product_id in best["id"] or best["id"] in product_id else best["id"]
+                            
+                            existing = db2.query(Product).filter(Product.id == use_id).first()
+                            if existing:
+                                return self._db_product_to_dict(existing)
+
+                            new_product = Product(
+                                id=use_id,
+                                name=best.get("name"),
+                                brand=best.get("brand"),
+                                category=best.get("category"),
+                                price_low=best.get("price_low"),
+                                price_high=best.get("price_high"),
+                                price_avg=best.get("price_avg"),
+                                currency=best.get("currency", "TRY"),
+                                specs=best.get("specs", {}),
+                                headline=f"{best.get('brand', '')} {best.get('name', '')[:50]}",
+                            )
+                            db2.add(new_product)
+                            
+                            # Add price history
+                            db2.add(PriceHistory(
+                                product_id=use_id,
+                                price=best.get("price_avg", 0),
+                                currency=best.get("currency", "TRY"),
+                                recorded_at=datetime.now(timezone.utc),
+                            ))
+                            db2.commit()
+                            db2.refresh(new_product)
+                            
+                            logger.info("Auto-synced product from SerpApi", product_id=use_id)
+                            return self._db_product_to_dict(new_product)
+                    
+        except Exception as e:
+            logger.warning("SerpApi smart fallback failed", product_id=product_id, error=str(e))
+        
+        # Step 3: Fallback to mock data
+        logger.info("Using mock fallback", product_id=product_id)
         return self._mock_product_data(product_id)
     
     def _db_product_to_dict(self, p) -> dict:

@@ -7,7 +7,8 @@ import json
 import structlog
 from src.models.product import ProductSpecs, UsageContextScores
 from src.llm import LLMProvider
-from src.security.sanitizer import sanitize_user_input
+from src.llm.advanced_provider import get_advanced_llm
+from src.security.sanitizer import sanitize_user_input, parse_safe_score
 from src.config import get_settings
 from src.pie.signal_analyzer import SignalAnalyzer
 
@@ -42,8 +43,11 @@ class DecisionSynthesizer:
         """
         Synthesize all data into decision summary using LLM with fallback.
         """
+        advanced_llm = get_advanced_llm()
+        
         try:
             return await self._synthesize_with_llm(
+                advanced_llm=advanced_llm,
                 name=name,
                 specs=specs,
                 context_scores=context_scores,
@@ -66,18 +70,7 @@ class DecisionSynthesizer:
         reviews: list = None,
     ) -> dict:
         """
-        Synthesize all data into decision summary.
-        
-        Args:
-            product_id: Product identifier
-            name: Product name
-            specs: Normalized specifications
-            context_scores: Usage context fit scores
-            price_info: Pricing information
-            reviews: User reviews (if available)
-            
-        Returns:
-            Decision summary dictionary
+        Synthesize all data into decision summary using rule-based labels.
         """
         # Determine best and avoid contexts
         best_for = self.analyzer.determine_best_for(context_scores)
@@ -112,14 +105,9 @@ class DecisionSynthesizer:
             "key_strengths": key_strengths,
             "key_weaknesses": key_weaknesses,
             "verdict_score": verdict_score,
-            "verdict_score": verdict_score,
             "verdict_text": verdict_text,
             "analysis_type": "rule_based",
         }
-    
-    
-    # Methods _determine_best_for, _determine_avoid_for, _extract_strengths, 
-    # _extract_weaknesses, _calculate_verdict_score have been moved to SignalAnalyzer.
 
     
     async def _generate_headline(self, name: str, best_for: list[str], specs: ProductSpecs) -> str:
@@ -179,6 +167,7 @@ class DecisionSynthesizer:
 
     async def _synthesize_with_llm(
         self,
+        advanced_llm,
         name: str,
         specs: ProductSpecs,
         context_scores: UsageContextScores,
@@ -211,49 +200,37 @@ class DecisionSynthesizer:
             reviews=safe_reviews
         )
         
-        # Generate JSON
-        response_json = await self.llm.generate(
+        schema = {
+            "headline": "Çarpıcı bir başlık",
+            "who_should_buy": ["Kitle 1", "Kitle 2"],
+            "who_should_avoid": ["Kitle 1", "Kitle 2"],
+            "key_strengths": [{"point": "Özellik", "impact": "high"}],
+            "key_weaknesses": [{"point": "Zayıf yön", "impact": "medium"}],
+            "verdict_text": "Özet metin",
+            "verdict_score": 8.5
+        }
+        
+        # Use advanced LLM for structured output
+        data = await advanced_llm.generate_structured(
             prompt=prompt,
-            system_prompt=self.llm.prompts.system_prompt_turkish(),
-            temperature=0.7
+            schema=schema,
+            system_prompt=self.llm.prompts.system_prompt_turkish()
         )
         
-        # Parse JSON (naive parsing, ensuring it's valid)
-        # Clean potential markdown code blocks if the LLM adds them
-        cleaned_json = response_json.replace("```json", "").replace("```", "").strip()
-        data = json.loads(cleaned_json)
-        
-        # Calculate calculated fields that LLM might miss or we want to enforce
-        # We still run determine_best_for/avoid_for for structure consistency if needed, 
-        # but the LLM output is preferred for the text parts.
-        
-        # Backfill any missing fields from rules if necessary, or just trust LLM.
-        # For 'best_for' and 'avoid_for', we trust our mathematical scoring for the *list*, 
-        # but we can use LLM's text.
-        # Actually, let's mix them. We use the LLM's rich text but maybe validate with scores?
-        # For this implementation, let's fully trust the LLM's high-level output 
-        # but ensure required fields exist.
-        
-        # Add sentiment analysis (hybrid: use code for sentiment score consistency)
+        # Mix mathematical tags with LLM rich text
         sentiment, sentiment_score = self._analyze_reviews(reviews)
         
         return {
             "headline": data.get("headline", f"{name} İncelemesi"),
             "sentiment": sentiment,
             "sentiment_score": sentiment_score,
-            "best_for": data.get("who_should_buy", []), # Note: Mapping issue? No, 'best_for' is context keys (gaming, etc). 
-                                                        # 'who_should_buy' is user personas.
-                                                        # The LLM prompt asks for 'who_should_buy'. 
-                                                        # The Pydantic model 'ProductIntelligence' has 'best_for' (list of strings, context IDs) AND 'who_should_buy' (list of strings).
-                                                        # We need to compute 'best_for' (contexts) mathematically because it relies on the fixed context keys.
-            "best_for": self.analyzer.determine_best_for(context_scores),  # Keep mathematical rigor for tags
-            "avoid_for": self.analyzer.determine_avoid_for(context_scores), # Keep mathematical rigor for tags
-            "who_should_buy": data.get("who_should_buy", []),
-            "who_should_avoid": data.get("who_should_avoid", []),
+            "best_for": self.analyzer.determine_best_for(context_scores),  # Tags (Math)
+            "avoid_for": self.analyzer.determine_avoid_for(context_scores), # Tags (Math)
+            "who_should_buy": data.get("who_should_buy", []),              # Personas (LLM)
+            "who_should_avoid": data.get("who_should_avoid", []),          # Personas (LLM)
             "key_strengths": data.get("key_strengths", []),
             "key_weaknesses": data.get("key_weaknesses", []),
-            "verdict_score": float(data.get("verdict_score", 0.0)),
-            "verdict_score": float(data.get("verdict_score", 0.0)),
+            "verdict_score": parse_safe_score(data.get("verdict_score", 0.0)),
             "verdict_text": data.get("verdict_text", ""),
             "analysis_type": "llm_generated",
         }

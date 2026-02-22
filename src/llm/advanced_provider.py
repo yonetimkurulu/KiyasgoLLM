@@ -195,34 +195,42 @@ Sadece JSON döndür, başka açıklama ekleme."""
         system_prompt: Optional[str],
         temperature: float,
     ) -> AsyncGenerator[str, None]:
-        """Stream from Ollama."""
+        """Stream from Ollama using chat endpoint."""
         import httpx
         
-        full_prompt = prompt
+        messages = []
         if system_prompt:
-            full_prompt = f"{system_prompt}\n\n{prompt}"
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
         
         try:
             async with httpx.AsyncClient() as client:
                 async with client.stream(
                     "POST",
-                    f"{config['base_url']}/api/generate",
+                    f"{config['base_url']}/api/chat",
                     json={
                         "model": config["model"],
-                        "prompt": full_prompt,
+                        "messages": messages,
                         "stream": True,
                         "options": {"temperature": temperature},
                     },
                     timeout=60.0,
                 ) as response:
                     async for line in response.aiter_lines():
-                        if line:
+                        if not line:
+                            continue
+                        try:
                             data = json.loads(line)
-                            if "response" in data:
-                                yield data["response"]
+                            if "message" in data and "content" in data["message"]:
+                                yield data["message"]["content"]
+                            if data.get("done"):
+                                break
+                        except json.JSONDecodeError:
+                            logger.warning("Ollama sent malformed JSON line", line=line)
+                            continue
         except Exception as e:
             logger.error("Ollama stream failed", error=str(e))
-            yield f"Hata: {str(e)}"
+            yield f" [Hata: Ollama akış hatası - {str(e)}]"
     
     async def _generate_with_provider(
         self,
@@ -266,17 +274,20 @@ Sadece JSON döndür, başka açıklama ekleme."""
         )
     
     async def _generate_ollama(self, config, prompt, system_prompt, temperature, max_tokens) -> LLMResponse:
-        """Generate with Ollama."""
+        """Generate with Ollama using chat endpoint."""
         import httpx
         
-        full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{config['base_url']}/api/generate",
+                f"{config['base_url']}/api/chat",
                 json={
                     "model": config["model"],
-                    "prompt": full_prompt,
+                    "messages": messages,
                     "stream": False,
                     "options": {"temperature": temperature, "num_predict": max_tokens},
                 },
@@ -284,8 +295,12 @@ Sadece JSON döndür, başka açıklama ekleme."""
             )
             result = response.json()
             
+            content = ""
+            if "message" in result:
+                content = result["message"].get("content", "")
+            
             return LLMResponse(
-                content=result.get("response", ""),
+                content=content,
                 model=config["model"],
                 provider="ollama",
             )
@@ -325,7 +340,7 @@ Sadece JSON döndür, başka açıklama ekleme."""
 
 Kurallar:
 - Her zaman Türkçe yanıt ver
-- Fiyatları ₺ ile göster
+- Fiyatları TL ile göster
 - Objektif ve veriye dayalı ol
 - Kısa ve öz yanıtlar ver
 - JSON istendiğinde sadece JSON döndür"""

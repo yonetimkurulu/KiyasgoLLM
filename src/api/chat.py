@@ -41,36 +41,11 @@ class ChatResponse(BaseModel):
 async def chat(request: ChatRequest):
     """
     Chat with AI assistant.
-    
-    Supports:
-    - Product questions
-    - Comparisons
-    - Recommendations
-    - General queries
     """
     conversation_id = request.conversation_id or _generate_id()
     
-    # Get conversation history
-    history_context = memory.get_context(conversation_id)
-    
-    # Sanitize inputs
-    safe_message = sanitize_user_input(request.message)
-    safe_context = sanitize_user_input(request.context) if request.context else None
-    
-    # Validate product_id if present
-    if request.product_id:
-        try:
-            validate_product_id(request.product_id)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-
-    # Build enhanced prompt
-    prompt = await _build_context_prompt(
-        message=safe_message,
-        history=history_context,
-        context=safe_context,
-        product_id=request.product_id,
-    )
+    # Process request (Sanitize, Validate, Build Prompt)
+    safe_data, prompt = await _prepare_chat_context(request, conversation_id)
     
     # Generate response
     response = await llm.generate(
@@ -93,29 +68,11 @@ async def chat(request: ChatRequest):
 async def chat_stream(request: ChatRequest):
     """
     Stream chat response.
-    
-    Returns Server-Sent Events (SSE).
     """
     conversation_id = request.conversation_id or _generate_id()
-    history_context = memory.get_context(conversation_id)
     
-    # Sanitize inputs
-    safe_message = sanitize_user_input(request.message)
-    safe_context = sanitize_user_input(request.context) if request.context else None
-
-    # Validate product_id if present
-    if request.product_id:
-        try:
-            validate_product_id(request.product_id)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
-    
-    prompt = await _build_context_prompt(
-        message=safe_message,
-        history=history_context,
-        context=safe_context,
-        product_id=request.product_id,
-    )
+    # Process request (Sanitize, Validate, Build Prompt)
+    safe_data, prompt = await _prepare_chat_context(request, conversation_id)
     
     async def generate():
         full_response = []
@@ -154,11 +111,13 @@ async def analyze_product(
     # Get commerce signals
     signals = await cse.analyze_product(product_id)
     
+    price_text = f"TL{intel.pricing.average:,}" if intel.pricing else "Bilinmiyor"
+    
     # Build analysis prompt
     context = f"""
 Ürün: {intel.name}
 Kategori: {intel.category}
-Fiyat: ₺{intel.pricing.average:,} if intel.pricing else "Bilinmiyor"
+Fiyat: {price_text}
 Özellikler: {intel.specs.chipset}, {intel.specs.ram_gb}GB RAM, {intel.specs.camera_mp}MP kamera
 
 Güçlü: {', '.join([s['point'] for s in intel.key_strengths[:3]])}
@@ -198,6 +157,37 @@ Ticari Sinyaller:
     }
 
 
+async def _prepare_chat_context(request: ChatRequest, conversation_id: str) -> tuple[dict, str]:
+    """Helper to prepare chat context: sanitize, validate, and build prompt."""
+    # Get conversation history
+    history_context = memory.get_context(conversation_id)
+    
+    # Sanitize inputs
+    safe_message = sanitize_user_input(request.message)
+    safe_context = sanitize_user_input(request.context) if request.context else None
+    
+    # Validate product_id if present
+    if request.product_id:
+        try:
+            validate_product_id(request.product_id)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    # Build enhanced prompt
+    prompt = await _build_context_prompt(
+        message=safe_message,
+        history=history_context,
+        context=safe_context,
+        product_id=request.product_id,
+    )
+    
+    return {
+        "message": safe_message,
+        "context": safe_context,
+        "product_id": request.product_id
+    }, prompt
+
+
 async def _build_context_prompt(
     message: str,
     history: str,
@@ -232,7 +222,7 @@ def _get_system_prompt(context: Optional[str]) -> str:
 Kurallar:
 - Her zaman Türkçe yanıt ver
 - Kısa ve öz ol
-- Fiyatları ₺ ile göster
+- Fiyatları TL ile göster
 - Tarafsız ve objektif ol"""
     
     if context == "gaming":
@@ -248,6 +238,6 @@ Kurallar:
 
 
 def _generate_id() -> str:
-    """Generate unique conversation ID."""
+    """Generate unique conversation ID (12 chars)."""
     import uuid
-    return str(uuid.uuid4())[:8]
+    return str(uuid.uuid4())[:12]
