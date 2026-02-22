@@ -43,23 +43,27 @@ async def lifespan(app: FastAPI):
     logger.info(f"LLM Provider: {settings.llm_provider}")
     logger.info(f"Cache enabled: {settings.cache_enabled}")
     
-    # Initialize database tables
-    from src.db.session import init_db
-    init_db()
-    logger.info("Database tables initialized")
-    
-    # Auto-seed if database is empty
-    from src.db.session import SessionLocal
-    from src.db.models import Product
-    db = SessionLocal()
-    if not db.query(Product).first():
-        db.close()
-        from src.db.seed import seed
-        seed()
-        logger.info("Database seeded with initial data")
-    else:
-        db.close()
-        logger.info("Database already contains data")
+    # Initialize database (safe — app starts even if DB fails)
+    try:
+        from src.db.session import init_db
+        init_db()
+        logger.info("Database tables initialized")
+        
+        # Auto-seed if database is empty
+        from src.db.session import SessionLocal
+        from src.db.models import Product
+        db = SessionLocal()
+        try:
+            if not db.query(Product).first():
+                from src.db.seed import seed
+                seed()
+                logger.info("Database seeded with initial data")
+            else:
+                logger.info("Database already contains data")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning("Database initialization skipped", error=str(e))
     
     yield
     

@@ -6,6 +6,7 @@ Database-backed: Tries repository first, falls back to mock if DB is empty.
 """
 from typing import Optional
 import structlog
+import random
 from datetime import datetime, timezone
 
 from src.models.product import (
@@ -281,7 +282,6 @@ class CommerceSignalEngine:
             db.close()
 
         # Mock fallback
-        import random
         base_price = 85000
         history = []
         for i in range(90):
