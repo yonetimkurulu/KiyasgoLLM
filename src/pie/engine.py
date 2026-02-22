@@ -1,6 +1,8 @@
 """
 Product Intelligence Engine (PIE)
 Ham veriyi karar sinyaline dönüştüren ana motor.
+
+Database-backed: Tries repository first, falls back to mock if DB is empty.
 """
 from typing import Optional
 import structlog
@@ -15,6 +17,8 @@ from src.pie.normalizer import SpecNormalizer
 from src.pie.usage_inference import UsageInferenceService
 from src.pie.decision_synthesizer import DecisionSynthesizer
 from src.llm import LLMProvider
+from src.db.session import SessionLocal
+from src.db.repository import ProductRepository
 
 logger = structlog.get_logger()
 
@@ -35,6 +39,11 @@ class ProductIntelligenceEngine:
         self.decision_synthesizer = DecisionSynthesizer()
         self.llm = LLMProvider()
     
+    def _get_repo(self):
+        """Create a short-lived repository with its own session."""
+        db = SessionLocal()
+        return ProductRepository(db), db
+
     async def analyze_product(
         self,
         product_id: str,
@@ -52,7 +61,7 @@ class ProductIntelligenceEngine:
         """
         logger.info("Analyzing product", product_id=product_id, context=context)
         
-        # Step 1: Get raw product data (mock for now)
+        # Step 1: Get raw product data (DB first, mock fallback)
         raw_data = await self._fetch_product_data(product_id)
         
         # Step 2: Normalize specifications
@@ -115,9 +124,26 @@ class ProductIntelligenceEngine:
         """
         logger.info("Searching products", query=query, category=category)
         
-        # Mock search results (would connect to database/search engine)
-        mock_results = await self._mock_search(query, category, limit)
+        # Try DB first
+        repo, db = self._get_repo()
+        try:
+            db_results = repo.search(query, category=category, limit=limit)
+            if db_results:
+                results = []
+                for p in db_results:
+                    results.append({
+                        "id": p.id,
+                        "name": p.name,
+                        "headline": p.headline or f"{p.name} - AI Analizi",
+                        "verdict_score": p.verdict_score,
+                        "best_for": (p.best_for or [])[:2],
+                    })
+                return results
+        finally:
+            db.close()
         
+        # Fallback: mock search → analyze
+        mock_results = self._mock_search(query, category, limit)
         results = []
         for item in mock_results:
             intel = await self.analyze_product(item["id"])
@@ -128,7 +154,6 @@ class ProductIntelligenceEngine:
                 "verdict_score": intel.verdict_score,
                 "best_for": intel.best_for[:2],
             })
-        
         return results
     
     async def get_top_products(
@@ -141,16 +166,28 @@ class ProductIntelligenceEngine:
         """Get top products for a category."""
         logger.info("Getting top products", category=category, budget=budget, context=context)
         
-        # Mock implementation
-        mock_products = await self._mock_category_products(category, budget, limit)
+        # Try DB first
+        repo, db = self._get_repo()
+        try:
+            if context:
+                db_products = repo.get_top_for_context(category, context, budget=budget, limit=limit)
+            else:
+                db_products = repo.get_by_category(category, budget=budget, limit=limit)
+            
+            if db_products:
+                product_ids = [p.id for p in db_products]
+            else:
+                product_ids = [p["id"] for p in self._mock_category_products(category, budget, limit)]
+        finally:
+            db.close()
         
         results = []
-        for product in mock_products:
-            intel = await self.analyze_product(product["id"], context=context)
+        for pid in product_ids:
+            intel = await self.analyze_product(pid, context=context)
             results.append(intel)
         
         # Sort by context score if context provided, else by verdict
-        if context and hasattr(results[0].context_scores, context):
+        if context and results and hasattr(results[0].context_scores, context):
             results.sort(key=lambda x: getattr(x.context_scores, context, 0), reverse=True)
         else:
             results.sort(key=lambda x: x.verdict_score, reverse=True)
@@ -159,10 +196,69 @@ class ProductIntelligenceEngine:
     
     async def _fetch_product_data(self, product_id: str) -> dict:
         """
-        Fetch raw product data from database/API.
-        Currently returns mock data.
+        Fetch raw product data.
+        Tries database first, falls back to mock data.
         """
-        # Mock data for demonstration
+        # Try DB
+        repo, db = self._get_repo()
+        try:
+            product = repo.get_by_id(product_id)
+            if product:
+                return self._db_product_to_dict(product)
+        finally:
+            db.close()
+        
+        # Fallback to mock data
+        return self._mock_product_data(product_id)
+    
+    def _db_product_to_dict(self, p) -> dict:
+        """Convert a DB Product row into the raw_data dict format the pipeline expects."""
+        specs = p.specs or {}
+        # If specs are stored as structured JSON, format them as strings for normalizer
+        raw_specs = {}
+        if specs.get("screen_size"):
+            raw_specs["screen_size"] = f"{specs['screen_size']} inch"
+        if specs.get("screen_type"):
+            raw_specs["screen_type"] = specs["screen_type"]
+        if specs.get("chipset"):
+            raw_specs["chipset"] = specs["chipset"]
+        if specs.get("ram_gb"):
+            raw_specs["ram"] = f"{specs['ram_gb']}GB"
+        if specs.get("storage_gb"):
+            raw_specs["storage"] = f"{specs['storage_gb']}GB"
+        if specs.get("battery_mah"):
+            raw_specs["battery"] = f"{specs['battery_mah']}mAh"
+        if specs.get("camera_mp"):
+            raw_specs["camera"] = f"{specs['camera_mp']}MP"
+        if specs.get("weight_grams"):
+            raw_specs["weight"] = f"{specs['weight_grams']}g"
+
+        pricing = None
+        if p.price_avg:
+            pricing = {
+                "current_low": p.price_low or p.price_avg,
+                "current_high": p.price_high or p.price_avg,
+                "average": p.price_avg,
+                "currency": p.currency or "TRY",
+                "trend": "stable",
+                "buy_signal": "neutral",
+            }
+
+        return {
+            "name": p.name,
+            "brand": p.brand,
+            "category": p.category,
+            "release_date": p.release_date,
+            "specs": raw_specs,
+            "pricing": pricing,
+            "price": p.price_avg or 0,
+            "reviews": [],
+        }
+
+    # ---- Mock data fallbacks ----
+
+    def _mock_product_data(self, product_id: str) -> dict:
+        """Mock data for products not in the database."""
         mock_products = {
             "samsung-galaxy-s24-ultra": {
                 "name": "Samsung Galaxy S24 Ultra",
@@ -188,8 +284,8 @@ class ProductIntelligenceEngine:
                     "buy_signal": "wait",
                 },
                 "reviews": [
-                    {"text": "Kamera mükemmel!", "sentiment": "positive"},
-                    {"text": "Biraz ağır ama kaliteli", "sentiment": "neutral"},
+                    {"text": "Kamera mukemmel!", "sentiment": "positive"},
+                    {"text": "Biraz agir ama kaliteli", "sentiment": "neutral"},
                 ],
             },
             "iphone-16-pro": {
@@ -217,16 +313,15 @@ class ProductIntelligenceEngine:
                 },
                 "reviews": [
                     {"text": "iOS ekosistemi harika", "sentiment": "positive"},
-                    {"text": "Performans üst düzey", "sentiment": "positive"},
+                    {"text": "Performans ust duzey", "sentiment": "positive"},
                 ],
             },
         }
         
-        # Return mock data or generate default
         if product_id in mock_products:
             return mock_products[product_id]
         
-        # Generate mock for unknown products
+        # Generic fallback
         return {
             "name": product_id.replace("-", " ").title(),
             "brand": "Unknown",
@@ -249,10 +344,9 @@ class ProductIntelligenceEngine:
             },
             "reviews": [],
         }
-    
-    async def _mock_search(self, query: str, category: Optional[str], limit: int) -> list[dict]:
-        """Mock search implementation."""
-        # Return some mock results based on query
+
+    def _mock_search(self, query: str, category: Optional[str], limit: int) -> list[dict]:
+        """Mock search fallback."""
         base_products = [
             {"id": "samsung-galaxy-s24-ultra"},
             {"id": "iphone-16-pro"},
@@ -262,8 +356,8 @@ class ProductIntelligenceEngine:
         ]
         return base_products[:limit]
     
-    async def _mock_category_products(self, category: str, budget: Optional[int], limit: int) -> list[dict]:
-        """Mock category products."""
+    def _mock_category_products(self, category: str, budget: Optional[int], limit: int) -> list[dict]:
+        """Mock category products fallback."""
         return [
             {"id": "samsung-galaxy-s24-ultra"},
             {"id": "iphone-16-pro"},

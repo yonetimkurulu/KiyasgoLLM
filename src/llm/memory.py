@@ -4,7 +4,7 @@ Conversation Memory
 """
 from typing import Optional
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 
@@ -13,7 +13,7 @@ class Message:
     """A single message in conversation."""
     role: str  # "user" or "assistant"
     content: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     metadata: dict = field(default_factory=dict)
 
 
@@ -23,7 +23,7 @@ class Conversation:
     id: str
     messages: list[Message] = field(default_factory=list)
     context: dict = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     
     def add_message(self, role: str, content: str, metadata: dict = None):
         """Add a message to the conversation."""

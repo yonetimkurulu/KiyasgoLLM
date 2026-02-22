@@ -7,7 +7,6 @@ import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.config import get_settings
-from src.config import get_settings
 from src.llm.prompts import PromptTemplates
 from src.llm.mock_provider import MockLLMProvider
 

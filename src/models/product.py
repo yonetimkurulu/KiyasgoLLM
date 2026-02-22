@@ -1,7 +1,7 @@
 """
 Pydantic models for KıyasGO AI Intelligence Service.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ class LLMHints(BaseModel):
 class BaseResponse(BaseModel):
     """Base response structure for all API endpoints."""
     version: str = "1.0"
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     source: str = "kiyasgo.com"
     citation: str = "KıyasGO Commerce Intelligence"
 
@@ -163,7 +163,7 @@ class CommerceSignals(BaseModel):
     """All commerce signals for a product."""
     product_id: str
     seller_id: Optional[str] = None
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     fake_discount: FakeDiscountSignal = Field(default_factory=FakeDiscountSignal)
     store_reliability: StoreReliabilitySignal = Field(default_factory=StoreReliabilitySignal)

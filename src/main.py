@@ -6,11 +6,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import structlog
 import time
 
 from src.config import get_settings
-from src.api import products, compare, best_for, signals, chat
+from src.api import products, compare, best_for, signals, chat, trends, explain
 
 # Configure structured logging
 structlog.configure(
@@ -28,6 +31,9 @@ structlog.configure(
 logger = structlog.get_logger()
 settings = get_settings()
 
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +42,24 @@ async def lifespan(app: FastAPI):
     logger.info("Starting KıyasGO AI Intelligence Service")
     logger.info(f"LLM Provider: {settings.llm_provider}")
     logger.info(f"Cache enabled: {settings.cache_enabled}")
+    
+    # Initialize database tables
+    from src.db.session import init_db
+    init_db()
+    logger.info("Database tables initialized")
+    
+    # Auto-seed if database is empty
+    from src.db.session import SessionLocal
+    from src.db.models import Product
+    db = SessionLocal()
+    if not db.query(Product).first():
+        db.close()
+        from src.db.seed import seed
+        seed()
+        logger.info("Database seeded with initial data")
+    else:
+        db.close()
+        logger.info("Database already contains data")
     
     yield
     
@@ -52,6 +76,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+# Rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS middleware
 app.add_middleware(
@@ -113,6 +141,16 @@ app.include_router(
     chat.router,
     prefix=f"/api/{settings.api_version}/ai",
     tags=["Chat"]
+)
+app.include_router(
+    trends.router,
+    prefix=f"/api/{settings.api_version}/ai",
+    tags=["Market Trends"]
+)
+app.include_router(
+    explain.router,
+    prefix=f"/api/{settings.api_version}/ai",
+    tags=["Explain"]
 )
 
 

@@ -19,9 +19,12 @@ LLM tabanlı, yeni nesil ürün kıyaslama, analiz ve alışveriş zekası platf
 |--------|----------|----------|
 | `GET` | `/health` | Servis sağlık durumu |
 | `GET` | `/api/v1/ai/products/{id}` | Detaylı ürün zekası raporu |
+| `GET` | `/api/v1/ai/products/search?q=` | AI destekli ürün arama |
 | `GET` | `/api/v1/ai/compare` | Akıllı ürün karşılaştırma matrisi |
 | `GET` | `/api/v1/ai/best-for/{context}` | Senaryo bazlı (örn: 'gaming') öneriler |
 | `GET` | `/api/v1/ai/signals/{id}` | Ticari risk ve fırsat sinyalleri |
+| `GET` | `/api/v1/ai/market/trends?category=` | Kategori bazlı pazar trendleri |
+| `GET` | `/api/v1/ai/explain/recommendation/{id}` | Öneri açıklama ve gerekçelendirme |
 | `POST` | `/api/v1/ai/chat` | AI Asistan (Genel sohbet) |
 | `POST` | `/api/v1/ai/chat/stream` | AI Asistan (Streaming yanıt) |
 | `POST` | `/api/v1/ai/chat/analyze` | Sohbet tabanlı derin ürün analizi |

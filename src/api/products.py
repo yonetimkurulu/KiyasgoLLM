@@ -21,6 +21,32 @@ router = APIRouter()
 pie = ProductIntelligenceEngine()
 
 
+@router.get("/products/search", response_model=dict)
+async def search_products(
+    q: str = Query(..., description="Search query"),
+    category: Optional[str] = Query(None),
+    limit: int = Query(10, ge=1, le=50),
+):
+    """
+    Search products with AI-enhanced results.
+    
+    Returns matching products with intelligence summaries.
+    """
+    try:
+        # Search and analyze products
+        results = await pie.search_products(q, category=category, limit=limit)
+        
+        return {
+            "query": q,
+            "category": category,
+            "count": len(results),
+            "results": results,
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/products/{product_id}", response_model=ProductResponse)
 async def get_product_intelligence(
     product_id: str,
@@ -55,7 +81,7 @@ async def get_product_intelligence(
                 key_facts=[
                     f"{intelligence.specs.camera_mp}MP kamera" if intelligence.specs.camera_mp else None,
                     f"{intelligence.specs.ram_gb}GB RAM" if intelligence.specs.ram_gb else None,
-                    f"Fiyat aralığı: ₺{intelligence.pricing.current_low:,} - ₺{intelligence.pricing.current_high:,}" if intelligence.pricing else None,
+                    f"Fiyat araligi: {intelligence.pricing.current_low:,} - {intelligence.pricing.current_high:,} TRY" if intelligence.pricing else None,
                 ],
                 comparison_context=f"Kategori: {intelligence.category}",
                 actionable_insight=intelligence.verdict_text,
@@ -66,32 +92,6 @@ async def get_product_intelligence(
         response.llm_hints.key_facts = [f for f in response.llm_hints.key_facts if f]
         
         return response
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/products/search", response_model=dict)
-async def search_products(
-    q: str = Query(..., description="Search query"),
-    category: Optional[str] = Query(None),
-    limit: int = Query(10, ge=1, le=50),
-):
-    """
-    Search products with AI-enhanced results.
-    
-    Returns matching products with intelligence summaries.
-    """
-    try:
-        # Search and analyze products
-        results = await pie.search_products(q, category=category, limit=limit)
-        
-        return {
-            "query": q,
-            "category": category,
-            "count": len(results),
-            "results": results,
-        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

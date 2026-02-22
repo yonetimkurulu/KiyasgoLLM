@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  # ---- KıyasGO AI Service ----
+  app:
+    build: .
+    container_name: kiyasgo-ai
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://kiyasgo:kiyasgo_secret@postgres:5432/kiyasgo
+      - CACHE_ENABLED=true
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ---- Redis Cache ----
+  redis:
+    image: redis:7-alpine
+    container_name: kiyasgo-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ---- PostgreSQL Database ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: kiyasgo-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: kiyasgo
+      POSTGRES_PASSWORD: kiyasgo_secret
+      POSTGRES_DB: kiyasgo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kiyasgo"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis_data:
+  postgres_data:
