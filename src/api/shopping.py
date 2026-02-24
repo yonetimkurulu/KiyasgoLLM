@@ -55,7 +55,7 @@ async def shopping_search(
         }
 
     except Exception as e:
-        logger.error("Shopping search failed", error=str(e))
+        logger.error("Shopping search failed", query=q, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -78,7 +78,7 @@ async def trigger_sync(
             return {"synced": all_stats}
 
     except Exception as e:
-        logger.error("Shopping sync failed", error=str(e))
+        logger.error("Shopping sync failed", category=category, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

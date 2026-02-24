@@ -3,9 +3,6 @@ Mock LLM Provider
 Standardized mock responses for fallback scenarios and testing.
 """
 import json
-from src.config import get_settings
-
-settings = get_settings()
 
 class MockLLMProvider:
     """Provides safe, predictable mock responses when LLMs fail."""

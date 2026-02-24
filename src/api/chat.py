@@ -8,6 +8,8 @@ from typing import Optional
 from pydantic import BaseModel
 import json
 import asyncio
+import uuid
+import structlog
 
 from src.llm.advanced_provider import get_advanced_llm
 from src.llm.memory import get_memory
@@ -15,6 +17,7 @@ from src.pie import ProductIntelligenceEngine
 from src.cse import CommerceSignalEngine
 from src.security.sanitizer import sanitize_user_input, validate_product_id
 
+logger = structlog.get_logger()
 router = APIRouter()
 llm = get_advanced_llm()
 memory = get_memory()
@@ -202,8 +205,8 @@ async def _build_context_prompt(
         try:
             intel = await pie.analyze_product(product_id)
             parts.append(f"[Ürün Bağlamı: {intel.name} - {intel.headline}]")
-        except:
-            pass
+        except Exception as e:
+            logger.debug("Could not load product context for chat", product_id=product_id, error=str(e))
     
     # Add conversation history
     if history:
@@ -239,5 +242,4 @@ Kurallar:
 
 def _generate_id() -> str:
     """Generate unique conversation ID (12 chars)."""
-    import uuid
     return str(uuid.uuid4())[:12]

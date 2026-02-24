@@ -1,11 +1,16 @@
 """
 Conversation Memory
 Çoklu-tur konuşma hafızası.
+Max conversation limit ile bellek kontrolü.
 """
-from typing import Optional
+from typing import Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from collections import OrderedDict
 import json
+import structlog
+
+logger = structlog.get_logger()
 
 
 @dataclass
@@ -58,40 +63,61 @@ class Conversation:
 class ConversationMemory:
     """
     Manage multiple conversations.
-    In-memory implementation (can be extended to Redis/DB).
+    In-memory implementation with LRU eviction.
+    Max conversations and max messages per conversation to prevent memory leaks.
     """
     
+    MAX_CONVERSATIONS = 100
+    MAX_MESSAGES_PER_CONVERSATION = 50
+    
     def __init__(self):
-        self._conversations: dict[str, Conversation] = {}
+        self._conversations: OrderedDict[str, Conversation] = OrderedDict()
     
     def get_or_create(self, conversation_id: str) -> Conversation:
-        """Get existing or create new conversation."""
-        if conversation_id not in self._conversations:
-            self._conversations[conversation_id] = Conversation(id=conversation_id)
-        return self._conversations[conversation_id]
+        """Get existing or create new conversation. Uses LRU eviction."""
+        if conversation_id in self._conversations:
+            # Move to end (most recently used)
+            self._conversations.move_to_end(conversation_id)
+            return self._conversations[conversation_id]
+        
+        # Evict oldest if at capacity
+        if len(self._conversations) >= self.MAX_CONVERSATIONS:
+            evicted_id, _ = self._conversations.popitem(last=False)
+            logger.debug("Evicted oldest conversation", conversation_id=evicted_id)
+        
+        conv = Conversation(id=conversation_id)
+        self._conversations[conversation_id] = conv
+        return conv
     
     def add_exchange(
         self,
         conversation_id: str,
         user_message: str,
         assistant_response: str,
-    ):
+    ) -> None:
         """Add a user/assistant exchange."""
         conv = self.get_or_create(conversation_id)
         conv.add_message("user", user_message)
         conv.add_message("assistant", assistant_response)
+        
+        # Trim old messages if over limit
+        if len(conv.messages) > self.MAX_MESSAGES_PER_CONVERSATION:
+            trimmed = len(conv.messages) - self.MAX_MESSAGES_PER_CONVERSATION
+            conv.messages = conv.messages[trimmed:]
+            logger.debug("Trimmed old messages", conversation_id=conversation_id, trimmed=trimmed)
     
     def get_context(self, conversation_id: str) -> str:
         """Get conversation context for prompts."""
         conv = self.get_or_create(conversation_id)
         return conv.get_context_prompt()
     
-    def clear(self, conversation_id: str):
+    def clear(self, conversation_id: str) -> None:
         """Clear a conversation."""
         if conversation_id in self._conversations:
             del self._conversations[conversation_id]
+            logger.debug("Conversation cleared", conversation_id=conversation_id)
     
-    def set_context(self, conversation_id: str, key: str, value):
+    def set_context(self, conversation_id: str, key: str, value: Any) -> None:
         """Set context variable for conversation."""
         conv = self.get_or_create(conversation_id)
         conv.context[key] = value

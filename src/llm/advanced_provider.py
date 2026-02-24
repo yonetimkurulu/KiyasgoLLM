@@ -3,6 +3,7 @@ Advanced LLM Provider with Streaming and Structured Output
 Gelişmiş LLM entegrasyonu - streaming, JSON mode, fallback chain.
 """
 import json
+import re
 import asyncio
 from typing import Optional, AsyncGenerator, Any
 from dataclasses import dataclass
@@ -52,13 +53,21 @@ class AdvancedLLMProvider:
             try:
                 from groq import Groq
                 return Groq(api_key=settings.groq_api_key)
-            except:
+            except ImportError:
+                logger.warning("Groq package not installed", provider=provider)
+                return None
+            except Exception as e:
+                logger.warning("Groq client init failed", provider=provider, error=str(e))
                 return None
         elif provider == "openai":
             try:
                 from openai import OpenAI
                 return OpenAI(api_key=settings.openai_api_key)
-            except:
+            except ImportError:
+                logger.warning("OpenAI package not installed", provider=provider)
+                return None
+            except Exception as e:
+                logger.warning("OpenAI client init failed", provider=provider, error=str(e))
                 return None
         elif provider == "ollama":
             return {"base_url": settings.ollama_base_url, "model": settings.ollama_model}
@@ -123,7 +132,7 @@ Sadece JSON döndür, başka açıklama ekleme."""
                 if result:
                     return result
             except Exception as e:
-                logger.warning(f"Provider {provider} failed", error=str(e))
+                logger.warning("Provider failed, trying next", provider=provider, error=str(e))
                 last_error = e
                 continue
         
@@ -347,21 +356,18 @@ Kurallar:
     
     def _extract_json(self, text: str) -> dict:
         """Extract JSON from text response."""
-        # Try to find JSON block
-        import re
-        
         # Look for ```json ... ``` block
         match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
         if match:
             try:
                 return json.loads(match.group(1))
-            except:
-                pass
+            except json.JSONDecodeError:
+                logger.debug("Failed to parse JSON from code block", text_snippet=match.group(1)[:100])
         
         # Try parsing the whole text
         try:
             return json.loads(text)
-        except:
+        except json.JSONDecodeError:
             pass
         
         # Try to find { ... } block
@@ -369,10 +375,11 @@ Kurallar:
         if match:
             try:
                 return json.loads(match.group(0))
-            except:
-                pass
+            except json.JSONDecodeError:
+                logger.debug("Failed to parse JSON from braces block", text_snippet=match.group(0)[:100])
         
-        # Return empty dict if all fails
+        # Return empty dict if all parsing fails
+        logger.warning("Could not extract JSON from LLM response", text_length=len(text))
         return {}
 
 

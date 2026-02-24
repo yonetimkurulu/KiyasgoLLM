@@ -5,6 +5,7 @@ GET /api/v1/ai/products/search
 """
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
+import structlog
 
 from src.models.product import (
     ProductResponse,
@@ -17,6 +18,7 @@ from src.models.product import (
 )
 from src.pie import ProductIntelligenceEngine
 
+logger = structlog.get_logger()
 router = APIRouter()
 pie = ProductIntelligenceEngine()
 
@@ -44,6 +46,7 @@ async def search_products(
         }
         
     except Exception as e:
+        logger.error("Product search failed", query=q, category=category, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -96,4 +99,5 @@ async def get_product_intelligence(
         return response
         
     except Exception as e:
+        logger.error("Product intelligence failed", product_id=product_id, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))

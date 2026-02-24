@@ -5,6 +5,7 @@ GET /api/v1/ai/market/trends
 """
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
+import structlog
 
 from src.models.product import (
     SignalsResponse,
@@ -14,6 +15,7 @@ from src.models.product import (
 )
 from src.cse import CommerceSignalEngine
 
+logger = structlog.get_logger()
 router = APIRouter()
 cse = CommerceSignalEngine()
 
@@ -84,10 +86,7 @@ async def get_product_signals(
         return response
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-    except Exception as e:
+        logger.error("Product signals request failed", product_id=product_id, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -115,4 +114,5 @@ async def get_category_signals(
         }
         
     except Exception as e:
+        logger.error("Category signals request failed", category=category, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))

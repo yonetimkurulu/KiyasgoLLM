@@ -137,14 +137,18 @@ class SpecNormalizer:
     
     def _extract_storage(self, storage_str: str) -> dict:
         """Extract storage variants."""
+        storage_text = str(storage_str)
+        if not storage_text.strip():
+            return {"primary": None, "variants": []}
+        
         # Find all storage values
-        matches = re.findall(r'(\d+)\s*(?:GB|TB)', str(storage_str), re.IGNORECASE)
+        matches = re.findall(r'(\d+)\s*(?:GB|TB)', storage_text, re.IGNORECASE)
         
         variants = []
         for match in matches:
             value = int(match)
             # Convert TB to GB if needed
-            if "TB" in storage_str.upper() and value < 10:
+            if "TB" in storage_text.upper() and value < 10:
                 value = value * 1024
             variants.append(value)
         
@@ -158,8 +162,12 @@ class SpecNormalizer:
     
     def _extract_main_camera(self, camera_str: str) -> Optional[int]:
         """Extract main camera megapixels."""
+        camera_text = str(camera_str)
+        if not camera_text.strip():
+            return None
+        
         # Find first/highest MP value
-        matches = re.findall(r'(\d+)\s*MP', str(camera_str), re.IGNORECASE)
+        matches = re.findall(r'(\d+)\s*MP', camera_text, re.IGNORECASE)
         
         if matches:
             return max(int(m) for m in matches)

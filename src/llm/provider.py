@@ -51,9 +51,15 @@ class LLMProvider:
         """Initialize Groq client."""
         try:
             from groq import Groq
+            if not settings.groq_api_key:
+                logger.warning("Groq API key not configured, using mock fallback")
+                return None
             return Groq(api_key=settings.groq_api_key)
         except ImportError:
-            logger.warning("Groq not installed, falling back to mock")
+            logger.warning("Groq package not installed, using mock fallback")
+            return None
+        except Exception as e:
+            logger.error("Groq client initialization failed", error=str(e))
             return None
     
     def _init_ollama(self):
@@ -68,9 +74,15 @@ class LLMProvider:
         """Initialize OpenAI client."""
         try:
             from openai import OpenAI
+            if not settings.openai_api_key:
+                logger.warning("OpenAI API key not configured, using mock fallback")
+                return None
             return OpenAI(api_key=settings.openai_api_key)
         except ImportError:
-            logger.warning("OpenAI not installed, falling back to mock")
+            logger.warning("OpenAI package not installed, using mock fallback")
+            return None
+        except Exception as e:
+            logger.error("OpenAI client initialization failed", error=str(e))
             return None
     
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
@@ -130,7 +142,7 @@ class LLMProvider:
             )
             return response.choices[0].message.content
         except Exception as e:
-            logger.error("Groq generation failed", error=str(e))
+            logger.error("Groq generation failed", error=str(e), model=settings.groq_model)
             return self._mock_response(prompt)
     
     async def _generate_ollama(
@@ -169,7 +181,7 @@ class LLMProvider:
                 result = response.json()
                 return result.get("response", "")
         except Exception as e:
-            logger.error("Ollama generation failed", error=str(e))
+            logger.error("Ollama generation failed", error=str(e), base_url=config["base_url"])
             return self._mock_response(prompt)
     
     async def _generate_openai(
@@ -197,7 +209,7 @@ class LLMProvider:
             )
             return response.choices[0].message.content
         except Exception as e:
-            logger.error("OpenAI generation failed", error=str(e))
+            logger.error("OpenAI generation failed", error=str(e), model=settings.openai_model)
             return self._mock_response(prompt)
     
     def _mock_response(self, prompt: str) -> str:

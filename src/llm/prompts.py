@@ -2,6 +2,7 @@
 LLM Prompt Templates
 Türkçe optimize edilmiş prompt şablonları.
 """
+import json
 
 
 class PromptTemplates:
@@ -158,7 +159,6 @@ Kullanıcının anlayabileceği basit bir dille açıkla:
         Generate a prompt for synthesizing a final decision about a product.
         Requests a JSON output.
         """
-        import json
         
         specs_str = json.dumps(specs, ensure_ascii=False, indent=2)
         scores_str = json.dumps(context_scores, ensure_ascii=False, indent=2)

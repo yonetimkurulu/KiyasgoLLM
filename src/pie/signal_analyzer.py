@@ -7,10 +7,19 @@ from typing import Optional
 from src.models.product import ProductSpecs, UsageContextScores
 from src.config import get_settings
 
-settings = get_settings()
 
 class SignalAnalyzer:
     """Analyzes product signals based on configuration rules."""
+
+    def __init__(self):
+        self._settings = None
+
+    @property
+    def settings(self):
+        """Lazy-load settings to avoid import-time side effects."""
+        if self._settings is None:
+            self._settings = get_settings()
+        return self._settings
 
     def determine_best_for(self, scores: UsageContextScores) -> list[str]:
         """Determine which contexts the product is best for."""
@@ -25,7 +34,7 @@ class SignalAnalyzer:
         }
         
         # Filter contexts with score > threshold
-        best = [ctx for ctx, score in context_dict.items() if score >= settings.score_threshold_best]
+        best = [ctx for ctx, score in context_dict.items() if score >= self.settings.score_threshold_best]
         # Sort by score
         best.sort(key=lambda x: context_dict[x], reverse=True)
         return best[:3]
@@ -43,7 +52,7 @@ class SignalAnalyzer:
         }
         
         # Filter contexts with score < threshold
-        avoid = [ctx for ctx, score in context_dict.items() if score < settings.score_threshold_avoid]
+        avoid = [ctx for ctx, score in context_dict.items() if score < self.settings.score_threshold_avoid]
         return avoid[:3]
 
     def generate_who_should_buy(
@@ -99,10 +108,10 @@ class SignalAnalyzer:
         if "student" in avoid_for:
             recommendations.append("Öğrenciler")
         
-        if specs.weight_grams and specs.weight_grams > settings.weight_heavy:
+        if specs.weight_grams and specs.weight_grams > self.settings.weight_heavy:
             recommendations.append("Kompakt telefon arayanlar")
         
-        if price_info and price_info.get("average", 0) > settings.price_medium_threshold:
+        if price_info and price_info.get("average", 0) > self.settings.price_medium_threshold:
             recommendations.append("Uygun fiyat arayanlar")
         
         if "gaming" in avoid_for:
@@ -126,9 +135,9 @@ class SignalAnalyzer:
             base_score += 0.8
         
         # Add based on camera
-        if specs.camera_mp and specs.camera_mp >= settings.camera_mp_high:
+        if specs.camera_mp and specs.camera_mp >= self.settings.camera_mp_high:
             base_score += 0.7
-        elif specs.camera_mp and specs.camera_mp >= settings.camera_mp_mid:
+        elif specs.camera_mp and specs.camera_mp >= self.settings.camera_mp_mid:
             base_score += 0.3
         
         # Add based on display
@@ -138,16 +147,16 @@ class SignalAnalyzer:
         # Subtract based on price (if expensive)
         if price_info:
             avg_price = price_info.get("average", 0)
-            if avg_price > settings.price_high_threshold:
+            if avg_price > self.settings.price_high_threshold:
                 base_score -= 0.5
-            elif avg_price > settings.price_medium_threshold:
+            elif avg_price > self.settings.price_medium_threshold:
                 base_score -= 0.2
         
         # Context diversity bonus
         best_contexts = sum(1 for v in [
             scores.gaming, scores.photography, scores.business,
             scores.creator, scores.long_term
-        ] if v >= settings.score_threshold_best)
+        ] if v >= self.settings.score_threshold_best)
         
         base_score += best_contexts * 0.2
         
@@ -157,13 +166,13 @@ class SignalAnalyzer:
         """Extract key strengths from specs."""
         strengths = []
         
-        if specs.camera_mp and specs.camera_mp >= settings.camera_mp_high:
+        if specs.camera_mp and specs.camera_mp >= self.settings.camera_mp_high:
             strengths.append({"point": f"{specs.camera_mp}MP ana kamera", "impact": "high"})
         
         if specs.chipset_tier == "flagship":
             strengths.append({"point": "Flagship işlemci", "impact": "high"})
         
-        if specs.battery_mah and specs.battery_mah >= settings.battery_mah_large:
+        if specs.battery_mah and specs.battery_mah >= self.settings.battery_mah_large:
             strengths.append({"point": f"{specs.battery_mah}mAh büyük batarya", "impact": "medium"})
         
         if specs.screen_type in ["AMOLED", "SUPER_AMOLED"]:
@@ -178,16 +187,16 @@ class SignalAnalyzer:
         """Extract key weaknesses from specs."""
         weaknesses = []
         
-        if specs.weight_grams and specs.weight_grams > settings.weight_heavy:
+        if specs.weight_grams and specs.weight_grams > self.settings.weight_heavy:
             weaknesses.append({"point": f"Ağır ({specs.weight_grams}g)", "impact": "medium"})
         
-        if price_info and price_info.get("average", 0) > settings.price_medium_threshold:
+        if price_info and price_info.get("average", 0) > self.settings.price_medium_threshold:
             weaknesses.append({"point": "Yüksek fiyat", "impact": "high"})
         
-        if specs.battery_mah and specs.battery_mah < settings.battery_mah_small:
+        if specs.battery_mah and specs.battery_mah < self.settings.battery_mah_small:
             weaknesses.append({"point": "Küçük batarya", "impact": "medium"})
         
-        if specs.storage_gb and specs.storage_gb < settings.storage_min:
+        if specs.storage_gb and specs.storage_gb < self.settings.storage_min:
             weaknesses.append({"point": "Sınırlı depolama", "impact": "medium"})
         
         return weaknesses[:4]

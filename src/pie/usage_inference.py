@@ -3,6 +3,7 @@ Usage Inference Service
 Ürünün hangi kullanım senaryolarına uygun olduğunu belirler.
 """
 from src.models.product import ProductSpecs, UsageContextScores
+from src.config import get_settings
 
 
 class UsageInferenceService:
@@ -18,6 +19,16 @@ class UsageInferenceService:
     - long_term: Update policy, repairability
     - creator: Display accuracy, performance, ports
     """
+    
+    def __init__(self):
+        self._settings = None
+
+    @property
+    def settings(self):
+        """Lazy-load settings to avoid import-time side effects."""
+        if self._settings is None:
+            self._settings = get_settings()
+        return self._settings
     
     def infer_contexts(self, specs: ProductSpecs, price: int) -> UsageContextScores:
         """

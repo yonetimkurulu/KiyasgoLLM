@@ -4,6 +4,7 @@ GET /api/v1/ai/best-for/{context}
 """
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
+import structlog
 
 from src.models.product import (
     BestForResponse,
@@ -15,6 +16,7 @@ from src.models.product import (
 )
 from src.recommendation import RecommendationEngine
 
+logger = structlog.get_logger()
 router = APIRouter()
 recommendation_engine = RecommendationEngine()
 
@@ -96,6 +98,7 @@ async def get_best_for(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error("Best-for recommendation failed", context=context, category=category, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
 

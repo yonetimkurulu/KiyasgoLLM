@@ -4,10 +4,13 @@ GET /api/v1/ai/explain/recommendation/{product_id}
 """
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
+import structlog
 
 from src.pie import ProductIntelligenceEngine
 from src.cse import CommerceSignalEngine
 from src.llm.advanced_provider import get_advanced_llm
+
+logger = structlog.get_logger()
 
 router = APIRouter()
 pie = ProductIntelligenceEngine()
@@ -75,4 +78,5 @@ Ticari Sinyaller:
         }
 
     except Exception as e:
+        logger.error("Explain recommendation failed", product_id=product_id, context=context, error=str(e))
         raise HTTPException(status_code=500, detail=str(e))

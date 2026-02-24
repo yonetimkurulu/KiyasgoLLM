@@ -2,11 +2,13 @@
 Market Trends API endpoint.
 GET /api/v1/ai/market/trends
 """
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
+import structlog
 
 from src.cse import CommerceSignalEngine
 
+logger = structlog.get_logger()
 router = APIRouter()
 cse = CommerceSignalEngine()
 
@@ -25,12 +27,16 @@ async def get_market_trends(
     - Category-wide risk indicators
     - Buying timing insights
     """
-    trends = await cse.get_market_trends(category, period=period)
+    try:
+        trends = await cse.get_market_trends(category, period=period)
 
-    return {
-        "category": category,
-        "period_days": period,
-        "trends": trends,
-        "source": "kiyasgo.com",
-        "citation": "KıyasGO Commerce Intelligence",
-    }
+        return {
+            "category": category,
+            "period_days": period,
+            "trends": trends,
+            "source": "kiyasgo.com",
+            "citation": "KıyasGO Commerce Intelligence",
+        }
+    except Exception as e:
+        logger.error("Market trends request failed", category=category, error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
