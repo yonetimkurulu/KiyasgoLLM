@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     score_threshold_best: float = 0.7
     score_threshold_avoid: float = 0.4
     
+    # Review Analysis
+    review_min_snippet_length: int = 15
+    review_max_batch_size: int = 20
+    review_hollow_patterns: str = r"çok iyi|harika|mükemmel|kötü|berbat|güzel|süper|fena değil"
+    
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

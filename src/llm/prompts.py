@@ -205,3 +205,49 @@ KURALLAR:
 3. Teknik özelliklere sadık kal ama yorum kat.
 4. "kamera: 108mp" gibi ham veri yerine "108MP ile detay canavarı kamera" gibi ifadeler kullan.
 """
+
+    def review_absa_prompt(self, reviews: list[dict]) -> str:
+        """
+        Generate an Aspect-Based Sentiment Analysis prompt for reviews.
+        Asks LLM to extract aspect-level sentiment labels in JSON.
+        """
+        review_lines = []
+        for i, r in enumerate(reviews, 1):
+            rating_str = f" ({r.get('rating')}★)" if r.get("rating") else ""
+            title = r.get("title", "")
+            snippet = r.get("snippet", "")
+            line = f"{i}. {title}{rating_str}: {snippet}"
+            review_lines.append(line)
+
+        reviews_text = "\n".join(review_lines)
+
+        return f"""Aşağıdaki kullanıcı yorumlarını Aspect-Based Sentiment Analysis (ABSA) yöntemiyle analiz et.
+
+YORUMLAR:
+{reviews_text}
+
+GÖREV:
+1. Her yorumda bahsedilen ürün yönlerini (aspect) tespit et (örn: Pil Ömrü, Ekran, Kamera, Performans, Tasarım, Fiyat/Performans, Ses Kalitesi, vb.)
+2. Her aspect için genel duygu durumunu belirle: +1 (olumlu), 0 (nötr), -1 (olumsuz)
+3. Her aspect'in kaç yorumda geçtiğini say
+4. Tüm yorumların genel sentiment puanını hesapla (0.0 = tam olumsuz, 1.0 = tam olumlu)
+5. Analizin güvenilirlik seviyesini belirle (0.0-1.0)
+
+İSTENEN JSON FORMATI:
+{{
+  "overall_sentiment_score": 0.78,
+  "aspects": [
+    {{"aspect": "Pil Ömrü", "score": 1, "mention_count": 5}},
+    {{"aspect": "Ekran", "score": -1, "mention_count": 3}},
+    {{"aspect": "Kamera", "score": 1, "mention_count": 8}}
+  ],
+  "confidence": 0.85
+}}
+
+KURALLAR:
+1. Sadece saf JSON döndür, başka açıklama ekleme.
+2. score değerleri sadece -1, 0 veya 1 olabilir.
+3. Aspect isimlerini Türkçe yaz.
+4. Aspects listesini mention_count'a göre azalan sırada döndür.
+5. Boş veya anlamsız yorumları değerlendirmeye dahil etme.
+"""
